@@ -5,7 +5,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from finance.security.permissions import IsManagerOrReadOnly
+from finance.security.permissions import IsManagerOrReadOnly, TenantScopedMixin
 
 from .models import Investment, InvestmentMovement
 from .serializers import InvestmentMovementSerializer, InvestmentSerializer
@@ -15,15 +15,12 @@ def _total(qs, movement_type):
     return qs.filter(movement_type=movement_type).aggregate(t=Sum('amount'))['t'] or Decimal('0')
 
 
-class InvestmentViewSet(viewsets.ModelViewSet):
+class InvestmentViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     queryset = Investment.objects.all()
     serializer_class = InvestmentSerializer
     permission_classes = [IsManagerOrReadOnly]
     filterset_fields = ('tenant', 'asset_type', 'status', 'currency')
     search_fields = ('name', 'institution', 'notes')
-
-    def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
 
     @action(detail=True, methods=['get'])
     def summary(self, request, pk=None):
@@ -69,7 +66,8 @@ class InvestmentViewSet(viewsets.ModelViewSet):
         return Response(result)
 
 
-class InvestmentMovementViewSet(viewsets.ModelViewSet):
+class InvestmentMovementViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    tenant_path = 'investment__tenant'
     queryset = InvestmentMovement.objects.select_related('investment')
     serializer_class = InvestmentMovementSerializer
     permission_classes = [IsManagerOrReadOnly]

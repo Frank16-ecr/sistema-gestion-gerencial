@@ -7,21 +7,18 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from finance.expenses.models import Expense
-from finance.security.permissions import IsManagerOrReadOnly
+from finance.security.permissions import IsManagerOrReadOnly, TenantScopedMixin
 
 from .models import Budget, BudgetLine
 from .serializers import BudgetLineSerializer, BudgetSerializer
 
 
-class BudgetViewSet(viewsets.ModelViewSet):
+class BudgetViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     queryset = Budget.objects.prefetch_related('lines')
     serializer_class = BudgetSerializer
     permission_classes = [IsManagerOrReadOnly]
     filterset_fields = ('tenant', 'fiscal_year', 'status', 'currency')
     search_fields = ('name', 'notes')
-
-    def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
 
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
@@ -80,7 +77,8 @@ class BudgetViewSet(viewsets.ModelViewSet):
         })
 
 
-class BudgetLineViewSet(viewsets.ModelViewSet):
+class BudgetLineViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    tenant_path = 'budget__tenant'
     queryset = BudgetLine.objects.select_related('budget')
     serializer_class = BudgetLineSerializer
     permission_classes = [IsManagerOrReadOnly]
