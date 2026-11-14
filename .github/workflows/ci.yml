@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "develop", "copilot/**"]
+  pull_request:
+    branches: ["main", "develop"]
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Django system check
+        env:
+          DJANGO_SETTINGS_MODULE: zelani.test_settings
+          SECRET_KEY: ci-test-secret-key
+        run: python manage.py check
+
+      - name: Run tests
+        env:
+          DJANGO_SETTINGS_MODULE: zelani.test_settings
+          SECRET_KEY: ci-test-secret-key
+        run: python manage.py test tests/ --verbosity=2
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install lint tools
+        run: pip install flake8 isort
+
+      - name: flake8
+        run: flake8 .
+
+      - name: isort check
+        run: isort --check-only --diff .
