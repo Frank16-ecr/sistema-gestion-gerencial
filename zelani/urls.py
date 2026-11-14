@@ -18,4 +18,7 @@ urlpatterns = [
     path('api/finance/fx/', include('finance.fx.urls')),
     path('api/finance/audit/', include('finance.audit.urls')),
     path('api/finance/reports/', include('finance.reports.urls')),
+    path('api/finance/security/', include('finance.security.urls')),
+    path('api/finance/budgets/', include('finance.budgets.urls')),
+    path('api/finance/investments/', include('finance.investments.urls')),
 ]

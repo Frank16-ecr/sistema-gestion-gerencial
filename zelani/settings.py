@@ -31,6 +31,10 @@ INSTALLED_APPS = [
     'finance.fx',
     'finance.audit',
     'finance.reports',
+    # Modulos agregados para el sistema de gestion gerencial
+    'finance.security',
+    'finance.budgets',
+    'finance.investments',
 ]
 
 MIDDLEWARE = [
