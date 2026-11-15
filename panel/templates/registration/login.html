@@ -1,18 +1,22 @@
 {% extends "panel/base.html" %}
 {% block title %}Entrar{% endblock %}
-{% block content %}
-<div class="card login">
-  <h1>Gestión gerencial</h1>
-  <p class="sub">Inicia sesión para continuar.</p>
-  {% if form.errors %}<p class="error">Usuario o contraseña incorrectos.</p>{% endif %}
-  <form method="post">
+{% block bare %}
+<div class="login-wrap">
+  <div class="login-hero">
+    <span class="logo-mark big">G</span>
+    <h1>Gestión gerencial</h1>
+    <p>Presupuestos, gastos e inversiones de tu empresa en un solo lugar.</p>
+  </div>
+  <form method="post" class="card login-card">
     {% csrf_token %}
+    <h2>Iniciar sesión</h2>
+    {% if form.errors %}<p class="alert bad">Usuario o contraseña incorrectos.</p>{% endif %}
     <label for="id_username">Usuario</label>
     <input type="text" name="username" id="id_username" autofocus autocomplete="username" required>
     <label for="id_password">Contraseña</label>
     <input type="password" name="password" id="id_password" autocomplete="current-password" required>
     <input type="hidden" name="next" value="{{ next }}">
-    <button type="submit">Entrar</button>
+    <button type="submit" class="btn primary block">Entrar</button>
   </form>
 </div>
 {% endblock %}

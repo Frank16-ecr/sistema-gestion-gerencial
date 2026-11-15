@@ -1,34 +1,58 @@
 {% extends "panel/base.html" %}
+{% load static %}
 {% block title %}{{ budget.name }}{% endblock %}
 {% block content %}
 <a class="back" href="{% url 'panel:budgets' %}">← Presupuestos</a>
-<h1>{{ budget.name }} {{ budget.fiscal_year }}</h1>
-<p class="sub">
-  <span class="badge {% if budget.status == 'approved' %}ok{% elif budget.status == 'closed' %}warn{% endif %}">{{ budget.get_status_display }}</span>
-  &nbsp;{{ budget.period_start|date:"d/m/Y" }} – {{ budget.period_end|date:"d/m/Y" }} · {{ budget.currency }}
-  {% if budget.approved_by %}· aprobado por {{ budget.approved_by.get_username }}{% endif %}
-</p>
+<div class="page-head">
+  <div>
+    <h1>{{ budget.name }} {{ budget.fiscal_year }}</h1>
+    <p class="sub">
+      <span class="badge {% if budget.status == 'approved' %}ok{% elif budget.status == 'closed' %}navy{% endif %}">{{ budget.get_status_display }}</span>
+      &nbsp;{{ budget.period_start|date:"d/m/Y" }} – {{ budget.period_end|date:"d/m/Y" }} · {{ budget.currency }}
+      {% if budget.approved_by %}· aprobado por {{ budget.approved_by.get_username }} el {{ budget.approved_at|date:"d/m/Y" }}{% endif %}
+    </p>
+  </div>
+  {% if can_write %}
+  <div class="actions">
+    {% if budget.status == 'draft' %}
+      <a class="btn" href="{% url 'panel:budget-edit' budget.pk %}">Editar</a>
+      <form method="post" action="{% url 'panel:budget-action' budget.pk 'approve' %}" class="inline-form"
+            data-confirm="¿Aprobar este presupuesto? Después ya no se podrá editar.">{% csrf_token %}
+        <button class="btn primary" type="submit">Aprobar</button></form>
+      <form method="post" action="{% url 'panel:budget-action' budget.pk 'delete' %}" class="inline-form"
+            data-confirm="¿Eliminar este presupuesto en borrador?">{% csrf_token %}
+        <button class="btn danger" type="submit">Eliminar</button></form>
+    {% elif budget.status == 'approved' %}
+      <form method="post" action="{% url 'panel:budget-action' budget.pk 'close' %}" class="inline-form"
+            data-confirm="¿Cerrar este presupuesto? Es el cierre del periodo.">{% csrf_token %}
+        <button class="btn accent" type="submit">Cerrar presupuesto</button></form>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
 
-<div class="grid">
-  <div class="card">
-    <div class="kpi-label">Planificado</div>
-    <div class="kpi-value">{{ execution.total_planned|floatformat:"2g" }}</div>
-  </div>
-  <div class="card">
-    <div class="kpi-label">Gastado</div>
+<div class="grid kpis">
+  <div class="card kpi navy"><div class="kpi-label">Planificado</div>
+    <div class="kpi-value">{{ execution.total_planned|floatformat:"2g" }}</div><div class="kpi-note">{{ budget.currency }}</div></div>
+  <div class="card kpi"><div class="kpi-label">Gastado</div>
     <div class="kpi-value">{{ execution.total_spent|floatformat:"2g" }}</div>
-    {% if execution.percent_used is not None %}<div class="kpi-note">{{ execution.percent_used|floatformat:0 }}% del presupuesto</div>{% endif %}
-  </div>
-  <div class="card">
-    <div class="kpi-label">Disponible</div>
-    <div class="kpi-value {% if execution.total_remaining < 0 %}neg{% endif %}">{{ execution.total_remaining|floatformat:"2g" }}</div>
-  </div>
+    {% if execution.percent_used is not None %}<div class="kpi-note">{{ execution.percent_used|floatformat:0 }}% del presupuesto</div>{% endif %}</div>
+  <div class="card kpi {% if execution.total_remaining < 0 %}alt{% endif %}"><div class="kpi-label">Disponible</div>
+    <div class="kpi-value {% if execution.total_remaining < 0 %}neg{% endif %}">{{ execution.total_remaining|floatformat:"2g" }}</div></div>
+</div>
+
+<div class="grid two" style="margin-bottom:18px">
+  <div class="card"><h2>Planificado vs. gastado</h2><div class="chart-box"><canvas id="c-execution"></canvas></div></div>
+  <div class="card"><h2>Gasto mensual</h2><div class="chart-box"><canvas id="c-monthly"></canvas></div></div>
 </div>
 
 <div class="card">
   <h2>Ejecución por categoría</h2>
-  <p class="sub">Se cuentan los gastos aprobados o pagados dentro del periodo y en {{ budget.currency }}.</p>
+  <p class="sub" style="margin-top:-6px">Se cuentan los gastos aprobados o pagados dentro del periodo y en {{ budget.currency }}.</p>
   {% include "panel/_execution_table.html" %}
 </div>
-{% if budget.notes %}<div class="card"><h2>Notas</h2><p>{{ budget.notes|linebreaksbr }}</p></div>{% endif %}
+{% if budget.notes %}<div class="card" style="margin-top:18px"><h2>Notas</h2><p>{{ budget.notes|linebreaksbr }}</p></div>{% endif %}
+{{ chart_execution|json_script:"chart-execution" }}
+{{ chart_monthly|json_script:"chart-monthly" }}
 {% endblock %}
+{% block scripts_vendor %}<script src="{% static 'panel/vendor/chart.umd.js' %}"></script>{% endblock %}

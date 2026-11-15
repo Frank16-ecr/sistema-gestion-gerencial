@@ -1,22 +1,40 @@
 {% extends "panel/base.html" %}
+{% load panel_extras %}
+{% load static %}
 {% block title %}Resumen{% endblock %}
 {% block content %}
-<h1>Resumen de {{ tenant.name }}</h1>
-<p class="sub">Vista general de presupuestos e inversiones.</p>
+<div class="page-head">
+  <div>
+    <h1>Resumen de {{ tenant.name }}</h1>
+    <p class="sub">Vista general de presupuestos, gastos e inversiones.</p>
+  </div>
+  {% if can_write %}
+  <div class="actions">
+    <a class="btn" href="{% url 'panel:expense-create' %}">+ Gasto</a>
+    <a class="btn" href="{% url 'panel:investment-create' %}">+ Inversión</a>
+    <a class="btn primary" href="{% url 'panel:budget-create' %}">+ Presupuesto</a>
+  </div>
+  {% endif %}
+</div>
 
-<div class="grid">
-  <div class="card">
+<div class="grid kpis">
+  <div class="card kpi">
     <div class="kpi-label">Presupuestos</div>
     <div class="kpi-value">{{ budget_count }}</div>
-    <div class="kpi-note"><a href="{% url 'panel:budgets' %}">Ver todos</a></div>
+    <div class="kpi-note">{% if draft_count %}{{ draft_count }} en borrador · {% endif %}<a href="{% url 'panel:budgets' %}">Ver todos</a></div>
   </div>
-  <div class="card">
+  <div class="card kpi alt">
+    <div class="kpi-label">Gastos por aprobar</div>
+    <div class="kpi-value">{{ pending_expenses }}</div>
+    <div class="kpi-note"><a href="{% url 'panel:expenses' %}?status=pending">Revisar pendientes</a></div>
+  </div>
+  <div class="card kpi navy">
     <div class="kpi-label">Inversiones activas</div>
     <div class="kpi-value">{{ investment_count }}</div>
     <div class="kpi-note"><a href="{% url 'panel:investments' %}">Ver todas</a></div>
   </div>
   {% for currency, row in portfolio.items %}
-  <div class="card">
+  <div class="card kpi">
     <div class="kpi-label">Saldo del portafolio ({{ currency }})</div>
     <div class="kpi-value">{{ row.current_balance|floatformat:"2g" }}</div>
     <div class="kpi-note">Capital invertido: {{ row.invested_capital|floatformat:"2g" }}</div>
@@ -24,21 +42,59 @@
   {% endfor %}
 </div>
 
-<div class="card">
-  <h2>Ejecución del presupuesto{% if featured_budget %}: {{ featured_budget.name }} {{ featured_budget.fiscal_year }}{% endif %}</h2>
-  {% if featured_execution %}
-    {% with ex=featured_execution %}
-    <p class="sub">
-      <span class="badge {% if featured_budget.status == 'approved' %}ok{% endif %}">{{ featured_budget.get_status_display }}</span>
-      &nbsp;Planificado {{ ex.total_planned|floatformat:"2g" }} {{ ex.currency }} ·
-      Gastado {{ ex.total_spent|floatformat:"2g" }} ·
-      Disponible <span class="{% if ex.total_remaining < 0 %}neg{% endif %}">{{ ex.total_remaining|floatformat:"2g" }}</span>
-    </p>
-    {% include "panel/_execution_table.html" with execution=ex %}
-    {% endwith %}
-    <p><a href="{% url 'panel:budget-detail' featured_budget.pk %}">Ver detalle</a></p>
-  {% else %}
-    <div class="empty">Todavía no hay presupuestos para esta empresa.</div>
+{% if featured_execution %}
+{% with ex=featured_execution %}
+<div class="card" style="margin-bottom:18px">
+  <div class="page-head" style="margin-bottom:10px">
+    <div>
+      <h2 style="margin:0">{{ featured_budget.name }} {{ featured_budget.fiscal_year }}
+        <span class="badge {% if featured_budget.status == 'approved' %}ok{% elif featured_budget.status == 'closed' %}navy{% endif %}">{{ featured_budget.get_status_display }}</span></h2>
+      <p class="sub">Planificado {{ ex.total_planned|floatformat:"2g" }} {{ ex.currency }} · Gastado {{ ex.total_spent|floatformat:"2g" }}
+        · Disponible <span class="{% if ex.total_remaining < 0 %}neg{% endif %}">{{ ex.total_remaining|floatformat:"2g" }}</span></p>
+    </div>
+    <a class="btn small" href="{% url 'panel:budget-detail' featured_budget.pk %}">Ver detalle</a>
+  </div>
+  {% if ex.percent_used is not None %}
+  <div class="meter {% if ex.percent_used > 100 %}bad{% elif ex.percent_used >= 80 %}warn{% endif %}" style="height:12px"><span style="width:{% if ex.percent_used > 100 %}100{% else %}{{ ex.percent_used|floatformat:0 }}{% endif %}%"></span></div>
+  <small>{{ ex.percent_used|floatformat:0 }}% del presupuesto utilizado</small>
   {% endif %}
 </div>
+
+<div class="grid two" style="margin-bottom:18px">
+  <div class="card"><h2>Planificado vs. gastado por categoría</h2><div class="chart-box"><canvas id="c-execution"></canvas></div></div>
+  <div class="card"><h2>Gasto mensual</h2><div class="chart-box"><canvas id="c-monthly"></canvas></div></div>
+</div>
+{{ chart_execution|json_script:"chart-execution" }}
+{{ chart_monthly|json_script:"chart-monthly" }}
+{% endwith %}
+{% else %}
+<div class="card empty" style="margin-bottom:18px">
+  <h2>Todavía no hay presupuestos</h2>
+  <p>Crea el primero para ver aquí la ejecución contra el gasto real.</p>
+  {% if can_write %}<a class="btn primary" href="{% url 'panel:budget-create' %}">Crear presupuesto</a>{% endif %}
+</div>
+{% endif %}
+
+<div class="grid two">
+  <div class="card">
+    <div class="page-head" style="margin-bottom:6px"><h2 style="margin:0">Portafolio por tipo</h2>
+      <select id="portfolio-currency" aria-label="Moneda" hidden></select></div>
+    {% if chart_portfolio %}<div class="chart-box"><canvas id="c-portfolio"></canvas></div>
+    {% else %}<div class="empty">Sin inversiones activas.</div>{% endif %}
+  </div>
+  <div class="card">
+    <div class="page-head" style="margin-bottom:6px"><h2 style="margin:0">Gastos recientes</h2>
+      <a class="btn small" href="{% url 'panel:expenses' %}">Ver todos</a></div>
+    <div class="table-wrap"><table>
+      <tbody>
+        {% for e in recent_expenses %}
+        <tr><td>{{ e.description }}<br><small>{{ e.expense_date|date:"d/m/Y" }}</small></td>
+            <td><span class="badge {% if e.status == 'paid' or e.status == 'approved' %}ok{% elif e.status == 'rejected' %}bad{% elif e.status == 'pending' %}warn{% endif %}">{{ e.status|expense_status }}</span></td>
+            <td class="num">{{ e.amount|floatformat:"2g" }} {{ e.currency }}</td></tr>
+        {% empty %}<tr><td class="empty">Aún no hay gastos registrados.</td></tr>{% endfor %}
+      </tbody></table></div>
+  </div>
+</div>
+{{ chart_portfolio|json_script:"chart-portfolio" }}
 {% endblock %}
+{% block scripts_vendor %}<script src="{% static 'panel/vendor/chart.umd.js' %}"></script>{% endblock %}

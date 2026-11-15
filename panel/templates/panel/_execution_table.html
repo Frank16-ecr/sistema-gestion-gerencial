@@ -1,7 +1,7 @@
 <div class="table-wrap">
   <table>
     <thead>
-      <tr><th>Categoría</th><th class="num">Planificado</th><th class="num">Gastado</th><th class="num">Disponible</th><th>Uso</th></tr>
+      <tr><th>Categoría</th><th class="num">Planificado</th><th class="num">Gastado</th><th class="num">Disponible</th><th style="min-width:140px">Uso</th></tr>
     </thead>
     <tbody>
       {% for line in execution.lines %}
@@ -12,20 +12,19 @@
         <td class="num {% if line.remaining < 0 %}neg{% endif %}">{{ line.remaining|floatformat:"2g" }}</td>
         <td>
           {% if line.percent_used is not None %}
-          <div class="bar-track" title="{{ line.percent_used }}%">
-            <div class="bar-fill {% if line.over_budget %}bad{% elif line.percent_used >= 80 %}warn{% endif %}"
-                 style="width: {% if line.percent_used > 100 %}100{% else %}{{ line.percent_used|floatformat:0 }}{% endif %}%"></div>
+          <div class="meter {% if line.over_budget %}bad{% elif line.percent_used >= 80 %}warn{% endif %}" title="{{ line.percent_used }}%">
+            <span style="width: {% if line.percent_used > 100 %}100{% else %}{{ line.percent_used|floatformat:0 }}{% endif %}%"></span>
           </div>
-          <small class="kpi-note">{{ line.percent_used|floatformat:0 }}%{% if line.over_budget %} · excedido{% endif %}</small>
+          <small>{{ line.percent_used|floatformat:0 }}%{% if line.over_budget %} · excedido{% endif %}</small>
           {% endif %}
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="5" class="empty">Este presupuesto no tiene líneas todavía.</td></tr>
+      <tr><td colspan="5" class="empty">Este presupuesto no tiene categorías todavía.</td></tr>
       {% endfor %}
       {% for item in execution.unbudgeted %}
       <tr>
-        <td>{{ item.label }} <span class="badge warn">sin presupuestar</span></td>
+        <td>{{ item.label }} <span class="badge bad">sin presupuestar</span></td>
         <td class="num">—</td>
         <td class="num">{{ item.spent|floatformat:"2g" }}</td>
         <td class="num">—</td>

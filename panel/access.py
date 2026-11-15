@@ -1,5 +1,5 @@
-"""Que empresas puede ver un usuario y cual esta seleccionada en el panel."""
-from finance.security.permissions import user_tenant_ids
+"""Que empresas puede ver un usuario, cual esta seleccionada en el panel y si puede escribir."""
+from finance.security.permissions import WRITE_ROLES, has_tenant_role, user_tenant_ids
 from tenants.models import Tenant
 
 SESSION_KEY = 'panel_tenant_id'
@@ -26,3 +26,8 @@ def current_tenant(request):
     if chosen:
         request.session[SESSION_KEY] = chosen.id
     return chosen, tenants
+
+
+def can_write(user, tenant):
+    """Rol admin o gerente en la empresa (o superusuario)."""
+    return bool(tenant) and has_tenant_role(user, tenant.id, WRITE_ROLES)

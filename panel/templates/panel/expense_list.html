@@ -1,0 +1,73 @@
+{% extends "panel/base.html" %}
+{% load panel_extras %}
+{% block title %}Gastos{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Gastos</h1><p class="sub">{{ tenant.name }}</p></div>
+  {% if can_write %}<div class="actions"><a class="btn primary" href="{% url 'panel:expense-create' %}">+ Registrar gasto</a></div>{% endif %}
+</div>
+
+<div class="grid kpis">
+  {% for card in status_cards %}
+  <a class="card kpi {% if card.code == 'rejected' %}alt{% elif card.code == 'pending' %}navy{% endif %}"
+     href="?status={{ card.code }}" style="color:inherit;text-decoration:none">
+    <div class="kpi-label">{{ card.label }}</div>
+    <div class="kpi-value">{{ card.n }}</div>
+    <div class="kpi-note">{{ card.total|floatformat:"2g" }} en total (mezcla de monedas)</div>
+  </a>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <div class="toolbar">
+    <input type="search" class="grow" placeholder="Buscar por descripción, categoría o monto…" data-filter="#expenses-table" data-count="#expenses-count" aria-label="Buscar">
+    <form method="get" class="toolbar" style="margin:0">
+      <select name="category" aria-label="Categoría" data-autosubmit>
+        <option value="">Todas las categorías</option>
+        {% for code, label in category_choices %}<option value="{{ code }}" {% if code == category %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+      <select name="status" aria-label="Estado" data-autosubmit>
+        <option value="">Todos los estados</option>
+        {% for code, label in status_choices %}<option value="{{ code }}" {% if code == status %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+      {% if status or category %}<a class="btn small" href="{% url 'panel:expenses' %}">Limpiar</a>{% endif %}
+    </form>
+    <small><span id="expenses-count">{{ expenses|length }}</span> gastos</small>
+  </div>
+  <div class="table-wrap">
+    <table id="expenses-table">
+      <thead>
+        <tr><th data-sort>Fecha</th><th data-sort>Descripción</th><th data-sort>Categoría</th><th data-sort>Estado</th>
+            <th class="num" data-sort>Monto</th>{% if can_write %}<th></th>{% endif %}</tr>
+      </thead>
+      <tbody>
+        {% for e in expenses %}
+        <tr data-row>
+          <td data-sort="{{ e.expense_date|date:'Y-m-d' }}">{{ e.expense_date|date:"d/m/Y" }}</td>
+          <td>{{ e.description }}{% if e.notes %}<br><small>{{ e.notes|truncatechars:70 }}</small>{% endif %}</td>
+          <td>{{ e.category|category_es }}</td>
+          <td><span class="badge {% if e.status == 'paid' or e.status == 'approved' %}ok{% elif e.status == 'rejected' %}bad{% elif e.status == 'pending' %}warn{% endif %}">{{ e.status|expense_status }}</span></td>
+          <td class="num" data-sort="{{ e.amount }}">{{ e.amount|floatformat:"2g" }} {{ e.currency }}</td>
+          {% if can_write %}
+          <td class="num">
+            {% if e.status == 'pending' %}
+              <form method="post" action="{% url 'panel:expense-action' e.pk 'approve' %}" class="inline-form">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn small primary">Aprobar</button></form>
+              <form method="post" action="{% url 'panel:expense-action' e.pk 'reject' %}" class="inline-form" data-confirm="¿Rechazar este gasto?">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn small danger">Rechazar</button></form>
+            {% elif e.status == 'approved' %}
+              <form method="post" action="{% url 'panel:expense-action' e.pk 'pay' %}" class="inline-form">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn small primary">Marcar pagado</button></form>
+              <form method="post" action="{% url 'panel:expense-action' e.pk 'reject' %}" class="inline-form" data-confirm="¿Rechazar este gasto?">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn small danger">Rechazar</button></form>
+            {% endif %}
+            {% if e.status == 'pending' or e.status == 'rejected' %}
+              <form method="post" action="{% url 'panel:expense-action' e.pk 'delete' %}" class="inline-form" data-confirm="¿Eliminar este gasto?">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn small danger" title="Eliminar">×</button></form>
+            {% endif %}
+          </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="empty">No hay gastos con esos filtros.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

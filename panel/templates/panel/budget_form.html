@@ -1,0 +1,63 @@
+{% extends "panel/base.html" %}
+{% block title %}{% if creating %}Nuevo presupuesto{% else %}Editar presupuesto{% endif %}{% endblock %}
+{% block content %}
+<a class="back" href="{% if creating %}{% url 'panel:budgets' %}{% else %}{% url 'panel:budget-detail' budget.pk %}{% endif %}">← Volver</a>
+<div class="page-head"><div>
+  <h1>{% if creating %}Nuevo presupuesto{% else %}Editar {{ budget.name }}{% endif %}</h1>
+  <p class="sub">{{ tenant.name }} · quedará en borrador hasta que lo apruebes.</p></div></div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="card">
+    <h2>Datos generales</h2>
+    {% if form.non_field_errors %}<p class="alert bad">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+    <div class="form-grid">
+      {% for field in form %}
+      <div class="{% if field.name == 'notes' or field.name == 'name' %}wide{% endif %}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <div class="page-head" style="margin-bottom:8px">
+      <div><h2 style="margin:0">Categorías y montos planificados</h2>
+        <p class="sub">Total planificado: <strong id="lines-total">0.00</strong></p></div>
+      <button type="button" class="btn small" id="add-line">+ Agregar categoría</button>
+    </div>
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}<p class="alert bad">{{ formset.non_form_errors|join:" " }}</p>{% endif %}
+    <div class="line-head"><span>Categoría</span><span>Monto</span><span>Nota</span><span style="width:38px"></span></div>
+    <div id="lines">
+      {% for line in formset %}
+      <div class="line-row">
+        {% for hidden in line.hidden_fields %}{{ hidden }}{% endfor %}
+        <div><label>Categoría</label>{{ line.category }}{% for e in line.category.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
+        <div><label>Monto</label>{{ line.planned_amount }}{% for e in line.planned_amount.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
+        <div><label>Nota</label>{{ line.notes }}</div>
+        <div>{% if line.DELETE %}<span hidden>{{ line.DELETE }}</span>{% endif %}
+          <button type="button" class="btn danger remove" data-remove-line title="Quitar">×</button></div>
+        {% if line.non_field_errors %}<div class="field-error">{{ line.non_field_errors|join:" " }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    <template id="line-template">
+      <div class="line-row">
+        {% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+        <div><label>Categoría</label>{{ formset.empty_form.category }}</div>
+        <div><label>Monto</label>{{ formset.empty_form.planned_amount }}</div>
+        <div><label>Nota</label>{{ formset.empty_form.notes }}</div>
+        <div><button type="button" class="btn danger remove" data-remove-line title="Quitar">×</button></div>
+      </div>
+    </template>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn primary" type="submit">{% if creating %}Crear presupuesto{% else %}Guardar cambios{% endif %}</button>
+    <a class="btn" href="{% if creating %}{% url 'panel:budgets' %}{% else %}{% url 'panel:budget-detail' budget.pk %}{% endif %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

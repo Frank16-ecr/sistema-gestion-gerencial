@@ -1,46 +1,83 @@
 {% extends "panel/base.html" %}
+{% load static panel_extras %}
 {% block title %}{{ investment.name }}{% endblock %}
 {% block content %}
 <a class="back" href="{% url 'panel:investments' %}">← Inversiones</a>
-<h1>{{ investment.name }}</h1>
-<p class="sub">
-  <span class="badge {% if investment.status == 'active' %}ok{% else %}warn{% endif %}">{{ investment.get_status_display }}</span>
-  &nbsp;{{ investment.get_asset_type_display }}{% if investment.institution %} · {{ investment.institution }}{% endif %}
-  · desde {{ investment.start_date|date:"d/m/Y" }}{% if investment.maturity_date %} hasta {{ investment.maturity_date|date:"d/m/Y" }}{% endif %}
-  {% if investment.expected_return_rate is not None %}· rendimiento esperado {{ investment.expected_return_rate|floatformat:"-2" }}% anual{% endif %}
-</p>
+<div class="page-head">
+  <div>
+    <h1>{{ investment.name }}</h1>
+    <p class="sub">
+      <span class="badge {% if investment.status == 'active' %}ok{% else %}navy{% endif %}">{{ investment.get_status_display }}</span>
+      &nbsp;{{ investment.get_asset_type_display }}{% if investment.institution %} · {{ investment.institution }}{% endif %}
+      · desde {{ investment.start_date|date:"d/m/Y" }}{% if investment.maturity_date %} hasta {{ investment.maturity_date|date:"d/m/Y" }}{% endif %}
+      {% if investment.expected_return_rate is not None %}· rendimiento esperado {{ investment.expected_return_rate|floatformat:"-2" }}% anual{% endif %}
+    </p>
+  </div>
+  {% if can_write %}
+  <div class="actions">
+    <a class="btn" href="{% url 'panel:investment-edit' investment.pk %}">Editar</a>
+    <form method="post" action="{% url 'panel:investment-delete' investment.pk %}" class="inline-form"
+          data-confirm="¿Eliminar esta inversión y todos sus movimientos? Esta acción no se puede deshacer.">{% csrf_token %}
+      <button class="btn danger" type="submit">Eliminar</button></form>
+  </div>
+  {% endif %}
+</div>
 
-<div class="grid">
-  <div class="card"><div class="kpi-label">Capital invertido</div>
+<div class="grid kpis">
+  <div class="card kpi navy"><div class="kpi-label">Capital invertido</div>
     <div class="kpi-value">{{ summary.invested_capital|floatformat:"2g" }}</div>
     <div class="kpi-note">Inicial {{ summary.initial_amount|floatformat:"2g" }} + aportes {{ summary.contributions|floatformat:"2g" }}</div></div>
-  <div class="card"><div class="kpi-label">Saldo actual ({{ investment.currency }})</div>
+  <div class="card kpi"><div class="kpi-label">Saldo actual ({{ investment.currency }})</div>
     <div class="kpi-value">{{ summary.current_balance|floatformat:"2g" }}</div></div>
-  <div class="card"><div class="kpi-label">Rendimiento neto</div>
+  <div class="card kpi {% if summary.net_return < 0 %}alt{% endif %}"><div class="kpi-label">Rendimiento neto</div>
     <div class="kpi-value {% if summary.net_return < 0 %}neg{% elif summary.net_return > 0 %}pos{% endif %}">{{ summary.net_return|floatformat:"2g" }}</div>
     <div class="kpi-note">Rendimientos {{ summary.returns|floatformat:"2g" }} − comisiones {{ summary.fees|floatformat:"2g" }}</div></div>
-  <div class="card"><div class="kpi-label">Retiros</div>
+  <div class="card kpi alt"><div class="kpi-label">Retiros</div>
     <div class="kpi-value">{{ summary.withdrawals|floatformat:"2g" }}</div></div>
 </div>
+
+<div class="card" style="margin-bottom:18px">
+  <h2>Evolución del saldo</h2>
+  <div class="chart-box"><canvas id="c-timeline"></canvas></div>
+</div>
+{{ chart_timeline|json_script:"chart-timeline" }}
+
+{% if can_write %}
+<form method="post" action="{% url 'panel:movement-add' investment.pk %}" class="card" style="margin-bottom:18px">
+  {% csrf_token %}
+  <h2>Registrar movimiento</h2>
+  <div class="mov-form">
+    <div><label for="{{ movement_form.movement_type.id_for_label }}">Tipo</label>{{ movement_form.movement_type }}</div>
+    <div><label for="{{ movement_form.amount.id_for_label }}">Monto</label>{{ movement_form.amount }}</div>
+    <div><label for="{{ movement_form.movement_date.id_for_label }}">Fecha</label>{{ movement_form.movement_date }}</div>
+    <div><label for="{{ movement_form.notes.id_for_label }}">Nota</label>{{ movement_form.notes }}</div>
+    <button class="btn primary" type="submit">Agregar</button>
+  </div>
+</form>
+{% endif %}
 
 <div class="card">
   <h2>Movimientos</h2>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th class="num">Monto</th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th class="num">Monto</th>{% if can_write %}<th></th>{% endif %}</tr></thead>
       <tbody>
         {% for m in movements %}
         <tr>
           <td>{{ m.movement_date|date:"d/m/Y" }}</td>
-          <td>{{ m.get_movement_type_display }}</td>
+          <td><span class="badge {% if m.movement_type == 'withdrawal' or m.movement_type == 'fee' %}bad{% else %}ok{% endif %}">{{ m.movement_type|movement_es }}</span></td>
           <td>{{ m.notes|default:"—" }}</td>
-          <td class="num">{{ m.amount|floatformat:"2g" }}</td>
+          <td class="num {% if m.movement_type == 'withdrawal' or m.movement_type == 'fee' %}neg{% else %}pos{% endif %}">{% if m.movement_type == 'withdrawal' or m.movement_type == 'fee' %}−{% else %}+{% endif %}{{ m.amount|floatformat:"2g" }}</td>
+          {% if can_write %}<td class="num">
+            <form method="post" action="{% url 'panel:movement-delete' investment.pk m.pk %}" class="inline-form" data-confirm="¿Eliminar este movimiento?">{% csrf_token %}
+              <button class="btn small danger" title="Eliminar">×</button></form></td>{% endif %}
         </tr>
         {% empty %}
-        <tr><td colspan="4" class="empty">Sin movimientos registrados.</td></tr>
+        <tr><td colspan="5" class="empty">Sin movimientos registrados.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 {% endblock %}
+{% block scripts_vendor %}<script src="{% static 'panel/vendor/chart.umd.js' %}"></script>{% endblock %}

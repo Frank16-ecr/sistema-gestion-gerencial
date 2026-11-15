@@ -1,25 +1,38 @@
 {% extends "panel/base.html" %}
 {% block title %}Presupuestos{% endblock %}
 {% block content %}
-<h1>Presupuestos</h1>
-<p class="sub">{{ tenant.name }}</p>
+<div class="page-head">
+  <div><h1>Presupuestos</h1><p class="sub">{{ tenant.name }}</p></div>
+  {% if can_write %}<div class="actions"><a class="btn primary" href="{% url 'panel:budget-create' %}">+ Nuevo presupuesto</a></div>{% endif %}
+</div>
 <div class="card">
+  <div class="toolbar">
+    <input type="search" class="grow" placeholder="Buscar presupuesto…" data-filter="#budgets-table" data-count="#budgets-count" aria-label="Buscar">
+    <small><span id="budgets-count">{{ rows|length }}</span> presupuestos</small>
+  </div>
   <div class="table-wrap">
-    <table>
+    <table id="budgets-table">
       <thead>
-        <tr><th>Nombre</th><th>Año</th><th>Periodo</th><th>Estado</th><th class="num">Planificado</th></tr>
+        <tr><th data-sort>Nombre</th><th data-sort>Año</th><th>Periodo</th><th data-sort>Estado</th>
+            <th class="num" data-sort>Planificado</th><th class="num" data-sort>Gastado</th><th style="min-width:130px">Uso</th></tr>
       </thead>
       <tbody>
         {% for row in rows %}
-        <tr>
-          <td><a href="{% url 'panel:budget-detail' row.budget.pk %}">{{ row.budget.name }}</a></td>
-          <td>{{ row.budget.fiscal_year }}</td>
-          <td>{{ row.budget.period_start|date:"d/m/Y" }} – {{ row.budget.period_end|date:"d/m/Y" }}</td>
-          <td><span class="badge {% if row.budget.status == 'approved' %}ok{% elif row.budget.status == 'closed' %}warn{% endif %}">{{ row.budget.get_status_display }}</span></td>
-          <td class="num">{{ row.planned|floatformat:"2g" }} {{ row.budget.currency }}</td>
+        {% with b=row.budget ex=row.execution %}
+        <tr data-row>
+          <td><a href="{% url 'panel:budget-detail' b.pk %}"><strong>{{ b.name }}</strong></a></td>
+          <td>{{ b.fiscal_year }}</td>
+          <td>{{ b.period_start|date:"d/m/Y" }} – {{ b.period_end|date:"d/m/Y" }}</td>
+          <td><span class="badge {% if b.status == 'approved' %}ok{% elif b.status == 'closed' %}navy{% endif %}">{{ b.get_status_display }}</span></td>
+          <td class="num" data-sort="{{ ex.total_planned }}">{{ ex.total_planned|floatformat:"2g" }} {{ b.currency }}</td>
+          <td class="num" data-sort="{{ ex.total_spent }}">{{ ex.total_spent|floatformat:"2g" }}</td>
+          <td>{% if ex.percent_used is not None %}
+            <div class="meter {% if ex.percent_used > 100 %}bad{% elif ex.percent_used >= 80 %}warn{% endif %}"><span style="width:{% if ex.percent_used > 100 %}100{% else %}{{ ex.percent_used|floatformat:0 }}{% endif %}%"></span></div>
+            <small>{{ ex.percent_used|floatformat:0 }}%</small>{% endif %}</td>
         </tr>
+        {% endwith %}
         {% empty %}
-        <tr><td colspan="5" class="empty">No hay presupuestos para esta empresa.</td></tr>
+        <tr><td colspan="7" class="empty">No hay presupuestos para esta empresa.{% if can_write %} <a href="{% url 'panel:budget-create' %}">Crea el primero</a>.{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
