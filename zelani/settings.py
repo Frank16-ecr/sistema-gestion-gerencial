@@ -35,7 +35,13 @@ INSTALLED_APPS = [
     'finance.security',
     'finance.budgets',
     'finance.investments',
+    # Panel web para gerencia
+    'panel',
 ]
+
+LOGIN_URL = 'panel:login'
+LOGIN_REDIRECT_URL = 'panel:home'
+LOGOUT_REDIRECT_URL = 'panel:login'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

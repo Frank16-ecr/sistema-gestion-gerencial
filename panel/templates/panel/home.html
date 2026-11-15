@@ -1,0 +1,44 @@
+{% extends "panel/base.html" %}
+{% block title %}Resumen{% endblock %}
+{% block content %}
+<h1>Resumen de {{ tenant.name }}</h1>
+<p class="sub">Vista general de presupuestos e inversiones.</p>
+
+<div class="grid">
+  <div class="card">
+    <div class="kpi-label">Presupuestos</div>
+    <div class="kpi-value">{{ budget_count }}</div>
+    <div class="kpi-note"><a href="{% url 'panel:budgets' %}">Ver todos</a></div>
+  </div>
+  <div class="card">
+    <div class="kpi-label">Inversiones activas</div>
+    <div class="kpi-value">{{ investment_count }}</div>
+    <div class="kpi-note"><a href="{% url 'panel:investments' %}">Ver todas</a></div>
+  </div>
+  {% for currency, row in portfolio.items %}
+  <div class="card">
+    <div class="kpi-label">Saldo del portafolio ({{ currency }})</div>
+    <div class="kpi-value">{{ row.current_balance|floatformat:"2g" }}</div>
+    <div class="kpi-note">Capital invertido: {{ row.invested_capital|floatformat:"2g" }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>Ejecución del presupuesto{% if featured_budget %}: {{ featured_budget.name }} {{ featured_budget.fiscal_year }}{% endif %}</h2>
+  {% if featured_execution %}
+    {% with ex=featured_execution %}
+    <p class="sub">
+      <span class="badge {% if featured_budget.status == 'approved' %}ok{% endif %}">{{ featured_budget.get_status_display }}</span>
+      &nbsp;Planificado {{ ex.total_planned|floatformat:"2g" }} {{ ex.currency }} ·
+      Gastado {{ ex.total_spent|floatformat:"2g" }} ·
+      Disponible <span class="{% if ex.total_remaining < 0 %}neg{% endif %}">{{ ex.total_remaining|floatformat:"2g" }}</span>
+    </p>
+    {% include "panel/_execution_table.html" with execution=ex %}
+    {% endwith %}
+    <p><a href="{% url 'panel:budget-detail' featured_budget.pk %}">Ver detalle</a></p>
+  {% else %}
+    <div class="empty">Todavía no hay presupuestos para esta empresa.</div>
+  {% endif %}
+</div>
+{% endblock %}

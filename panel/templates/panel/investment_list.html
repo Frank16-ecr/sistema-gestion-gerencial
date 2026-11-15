@@ -1,0 +1,43 @@
+{% extends "panel/base.html" %}
+{% block title %}Inversiones{% endblock %}
+{% block content %}
+<h1>Inversiones</h1>
+<p class="sub">{{ tenant.name }}</p>
+
+{% if portfolio %}
+<div class="grid">
+  {% for currency, row in portfolio.items %}
+  <div class="card">
+    <div class="kpi-label">Portafolio activo ({{ currency }})</div>
+    <div class="kpi-value">{{ row.current_balance|floatformat:"2g" }}</div>
+    <div class="kpi-note">{{ row.investments }} inversión{{ row.investments|pluralize:"es" }} · capital {{ row.invested_capital|floatformat:"2g" }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Nombre</th><th>Tipo</th><th>Estado</th><th>Vence</th><th class="num">Capital</th><th class="num">Saldo actual</th></tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><a href="{% url 'panel:investment-detail' row.investment.pk %}">{{ row.investment.name }}</a>
+              {% if row.investment.institution %}<div class="kpi-note">{{ row.investment.institution }}</div>{% endif %}</td>
+          <td>{{ row.investment.get_asset_type_display }}</td>
+          <td><span class="badge {% if row.investment.status == 'active' %}ok{% else %}warn{% endif %}">{{ row.investment.get_status_display }}</span></td>
+          <td>{{ row.investment.maturity_date|date:"d/m/Y"|default:"—" }}</td>
+          <td class="num">{{ row.summary.invested_capital|floatformat:"2g" }} {{ row.investment.currency }}</td>
+          <td class="num">{{ row.summary.current_balance|floatformat:"2g" }} {{ row.investment.currency }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="empty">No hay inversiones para esta empresa.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

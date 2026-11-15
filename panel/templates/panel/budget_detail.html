@@ -1,0 +1,34 @@
+{% extends "panel/base.html" %}
+{% block title %}{{ budget.name }}{% endblock %}
+{% block content %}
+<a class="back" href="{% url 'panel:budgets' %}">← Presupuestos</a>
+<h1>{{ budget.name }} {{ budget.fiscal_year }}</h1>
+<p class="sub">
+  <span class="badge {% if budget.status == 'approved' %}ok{% elif budget.status == 'closed' %}warn{% endif %}">{{ budget.get_status_display }}</span>
+  &nbsp;{{ budget.period_start|date:"d/m/Y" }} – {{ budget.period_end|date:"d/m/Y" }} · {{ budget.currency }}
+  {% if budget.approved_by %}· aprobado por {{ budget.approved_by.get_username }}{% endif %}
+</p>
+
+<div class="grid">
+  <div class="card">
+    <div class="kpi-label">Planificado</div>
+    <div class="kpi-value">{{ execution.total_planned|floatformat:"2g" }}</div>
+  </div>
+  <div class="card">
+    <div class="kpi-label">Gastado</div>
+    <div class="kpi-value">{{ execution.total_spent|floatformat:"2g" }}</div>
+    {% if execution.percent_used is not None %}<div class="kpi-note">{{ execution.percent_used|floatformat:0 }}% del presupuesto</div>{% endif %}
+  </div>
+  <div class="card">
+    <div class="kpi-label">Disponible</div>
+    <div class="kpi-value {% if execution.total_remaining < 0 %}neg{% endif %}">{{ execution.total_remaining|floatformat:"2g" }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Ejecución por categoría</h2>
+  <p class="sub">Se cuentan los gastos aprobados o pagados dentro del periodo y en {{ budget.currency }}.</p>
+  {% include "panel/_execution_table.html" %}
+</div>
+{% if budget.notes %}<div class="card"><h2>Notas</h2><p>{{ budget.notes|linebreaksbr }}</p></div>{% endif %}
+{% endblock %}

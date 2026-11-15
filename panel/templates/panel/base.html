@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Panel{% endblock %} · Gestión gerencial</title>
+  <style>
+    :root {
+      --bg: #f4f5f7; --surface: #ffffff; --text: #1b2430; --muted: #667085; --line: #e3e6eb;
+      --brand: #1f4fd8; --brand-soft: #e8eefc; --ok: #138a4b; --ok-soft: #e3f5ec;
+      --warn: #b25e09; --warn-soft: #fdf0dc; --bad: #c0362c; --bad-soft: #fbe6e4;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #11151b; --surface: #1a2029; --text: #e8ecf2; --muted: #9aa4b2; --line: #2a323d;
+        --brand: #7aa2ff; --brand-soft: #1e2a47; --ok: #55d08b; --ok-soft: #173326;
+        --warn: #f0b35c; --warn-soft: #3a2b12; --bad: #ff8a80; --bad-soft: #3d1d1a;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+           font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    a { color: var(--brand); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header { background: var(--surface); border-bottom: 1px solid var(--line); }
+    .bar { max-width: 1100px; margin: 0 auto; padding: 12px 16px; display: flex; flex-wrap: wrap;
+           align-items: center; gap: 12px 24px; }
+    .brand { font-weight: 700; font-size: 16px; color: var(--text); }
+    nav { display: flex; gap: 4px; flex: 1; }
+    nav a { padding: 6px 12px; border-radius: 8px; color: var(--muted); font-weight: 500; }
+    nav a:hover { background: var(--bg); text-decoration: none; }
+    nav a.active { background: var(--brand-soft); color: var(--brand); }
+    .who { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 14px; }
+    select, button { font: inherit; color: var(--text); background: var(--surface);
+                     border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+    button { cursor: pointer; }
+    main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    h2 { font-size: 16px; margin: 0 0 12px; }
+    .sub { color: var(--muted); margin: 0 0 20px; }
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 24px; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+    .card + .card { margin-top: 16px; }
+    .grid .card + .card { margin-top: 0; }
+    .kpi-label { color: var(--muted); font-size: 13px; }
+    .kpi-value { font-size: 26px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .kpi-note { color: var(--muted); font-size: 13px; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-size: 13px; font-weight: 600; }
+    tr:last-child td { border-bottom: 0; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .table-wrap { overflow-x: auto; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+             background: var(--brand-soft); color: var(--brand); }
+    .badge.ok { background: var(--ok-soft); color: var(--ok); }
+    .badge.warn { background: var(--warn-soft); color: var(--warn); }
+    .badge.bad { background: var(--bad-soft); color: var(--bad); }
+    .bar-track { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; min-width: 90px; }
+    .bar-fill { height: 100%; background: var(--brand); }
+    .bar-fill.warn { background: var(--warn); }
+    .bar-fill.bad { background: var(--bad); }
+    .empty { text-align: center; color: var(--muted); padding: 32px 8px; }
+    .back { display: inline-block; margin-bottom: 12px; color: var(--muted); }
+    .pos { color: var(--ok); } .neg { color: var(--bad); }
+    .login { max-width: 360px; margin: 64px auto; }
+    .login label { display: block; margin: 12px 0 4px; font-weight: 500; }
+    .login input { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px;
+                   font: inherit; color: var(--text); background: var(--surface); }
+    .login button { margin-top: 18px; width: 100%; background: var(--brand); color: #fff; border-color: var(--brand);
+                    font-weight: 600; padding: 10px; }
+    .error { color: var(--bad); background: var(--bad-soft); padding: 8px 12px; border-radius: 8px; }
+    @media (max-width: 600px) { .kpi-value { font-size: 22px; } }
+  </style>
+</head>
+<body>
+  {% if user.is_authenticated %}
+  <header>
+    <div class="bar">
+      <span class="brand">Gestión gerencial</span>
+      <nav>
+        <a href="{% url 'panel:home' %}" class="{% if section == 'home' %}active{% endif %}">Resumen</a>
+        <a href="{% url 'panel:budgets' %}" class="{% if section == 'budgets' %}active{% endif %}">Presupuestos</a>
+        <a href="{% url 'panel:investments' %}" class="{% if section == 'investments' %}active{% endif %}">Inversiones</a>
+        {% if user.is_staff %}<a href="{% url 'admin:index' %}">Administración</a>{% endif %}
+      </nav>
+      <div class="who">
+        {% if tenants|length > 1 %}
+        <form method="get" id="tenant-form">
+          <select name="tenant" aria-label="Empresa" onchange="this.form.submit()">
+            {% for t in tenants %}<option value="{{ t.id }}" {% if t.id == tenant.id %}selected{% endif %}>{{ t.name }}</option>{% endfor %}
+          </select>
+        </form>
+        {% elif tenant %}<strong>{{ tenant.name }}</strong>{% endif %}
+        <span>{{ user.get_username }}</span>
+        <form method="post" action="{% url 'panel:logout' %}">{% csrf_token %}<button type="submit">Salir</button></form>
+      </div>
+    </div>
+  </header>
+  {% endif %}
+  <main>
+    {% if user.is_authenticated and not tenant %}
+      <div class="card empty">
+        <h2>Sin empresas asignadas</h2>
+        <p>Tu usuario todavía no tiene un rol en ninguna empresa. Pídele a un administrador que te asigne uno.</p>
+      </div>
+    {% else %}
+      {% block content %}{% endblock %}
+    {% endif %}
+  </main>
+</body>
+</html>

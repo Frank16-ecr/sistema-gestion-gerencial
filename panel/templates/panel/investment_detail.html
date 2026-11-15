@@ -1,0 +1,46 @@
+{% extends "panel/base.html" %}
+{% block title %}{{ investment.name }}{% endblock %}
+{% block content %}
+<a class="back" href="{% url 'panel:investments' %}">← Inversiones</a>
+<h1>{{ investment.name }}</h1>
+<p class="sub">
+  <span class="badge {% if investment.status == 'active' %}ok{% else %}warn{% endif %}">{{ investment.get_status_display }}</span>
+  &nbsp;{{ investment.get_asset_type_display }}{% if investment.institution %} · {{ investment.institution }}{% endif %}
+  · desde {{ investment.start_date|date:"d/m/Y" }}{% if investment.maturity_date %} hasta {{ investment.maturity_date|date:"d/m/Y" }}{% endif %}
+  {% if investment.expected_return_rate is not None %}· rendimiento esperado {{ investment.expected_return_rate|floatformat:"-2" }}% anual{% endif %}
+</p>
+
+<div class="grid">
+  <div class="card"><div class="kpi-label">Capital invertido</div>
+    <div class="kpi-value">{{ summary.invested_capital|floatformat:"2g" }}</div>
+    <div class="kpi-note">Inicial {{ summary.initial_amount|floatformat:"2g" }} + aportes {{ summary.contributions|floatformat:"2g" }}</div></div>
+  <div class="card"><div class="kpi-label">Saldo actual ({{ investment.currency }})</div>
+    <div class="kpi-value">{{ summary.current_balance|floatformat:"2g" }}</div></div>
+  <div class="card"><div class="kpi-label">Rendimiento neto</div>
+    <div class="kpi-value {% if summary.net_return < 0 %}neg{% elif summary.net_return > 0 %}pos{% endif %}">{{ summary.net_return|floatformat:"2g" }}</div>
+    <div class="kpi-note">Rendimientos {{ summary.returns|floatformat:"2g" }} − comisiones {{ summary.fees|floatformat:"2g" }}</div></div>
+  <div class="card"><div class="kpi-label">Retiros</div>
+    <div class="kpi-value">{{ summary.withdrawals|floatformat:"2g" }}</div></div>
+</div>
+
+<div class="card">
+  <h2>Movimientos</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th class="num">Monto</th></tr></thead>
+      <tbody>
+        {% for m in movements %}
+        <tr>
+          <td>{{ m.movement_date|date:"d/m/Y" }}</td>
+          <td>{{ m.get_movement_type_display }}</td>
+          <td>{{ m.notes|default:"—" }}</td>
+          <td class="num">{{ m.amount|floatformat:"2g" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="empty">Sin movimientos registrados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
