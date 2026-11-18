@@ -171,3 +171,22 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--green-brigh
   .kpi-value { font-size: 23px; } h1 { font-size: 21px; }
 }
 @media print { .sidebar, .topbar, .actions, .toasts { display: none !important; } body.with-shell { display: block; } }
+
+/* ---------- piezas genericas (modulos nuevos) ---------- */
+.facts { display: grid; gap: 14px 24px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin: 0; }
+.facts dt { color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.facts dd { margin: 2px 0 0; font-weight: 550; word-break: break-word; }
+label.check { display: flex; gap: 8px; align-items: center; font-weight: 600; margin-top: 28px; }
+label.check input { width: auto; }
+.nav-group { margin: 14px 12px 4px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: rgba(233, 240, 249, .45); }
+.sidebar nav { overflow-y: auto; }
+.btn.small { white-space: nowrap; }
+.line-row.five, .line-head.five { grid-template-columns: 1.5fr .8fr .8fr 1.2fr auto; }
+.totals { display: flex; gap: 22px; flex-wrap: wrap; margin: 10px 0 0; font-variant-numeric: tabular-nums; }
+.totals .bad-total { color: var(--fuchsia); font-weight: 700; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+@media (max-width: 860px) { .line-row.five, .line-head.five { grid-template-columns: 1fr 1fr; } }
+.sidebar nav { overflow-y: auto; min-height: 0; }
+.sidebar { max-height: 100vh; }
+.sidebar nav a { padding: 8px 12px; }
+.nav-group { margin-top: 8px; }

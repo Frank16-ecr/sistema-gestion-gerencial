@@ -1,0 +1,69 @@
+{% extends "panel/base.html" %}
+{% block title %}Nuevo asiento{% endblock %}
+{% block content %}
+<a class="back" href="{% url 'panel:journal' %}">← Asientos contables</a>
+<div class="page-head"><div><h1>Nuevo asiento contable</h1>
+  <p class="sub">{{ tenant.name }} · el total del Debe debe ser igual al del Haber.</p></div></div>
+
+{% if not has_accounts %}
+<p class="alert info">Primero crea cuentas en el <a href="{% url 'panel:chart-of-accounts' %}">plan de cuentas</a>.</p>
+{% endif %}
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="card">
+    <h2>Datos generales</h2>
+    {% if form.non_field_errors %}<p class="alert bad">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+    <div class="form-grid">
+      {% for field in form %}
+      <div class="{% if field.name == 'description' %}wide{% endif %}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+        {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <div class="page-head" style="margin-bottom:8px">
+      <div><h2 style="margin:0">Líneas del asiento</h2>
+        <div class="totals">
+          <span>Debe: <strong data-total-for="[name$='-debit_amount']">0.00</strong></span>
+          <span>Haber: <strong data-total-for="[name$='-credit_amount']">0.00</strong></span>
+          <span>Diferencia: <strong id="sum-diff">0.00</strong></span>
+        </div>
+      </div>
+      <button type="button" class="btn small" id="add-line">+ Agregar línea</button>
+    </div>
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}<p class="alert bad">{{ formset.non_form_errors|join:" " }}</p>{% endif %}
+    <div class="line-head five"><span>Cuenta</span><span>Debe</span><span>Haber</span><span>Detalle</span><span style="width:38px"></span></div>
+    <div id="lines">
+      {% for line in formset %}
+      <div class="line-row five">
+        {% for hidden in line.hidden_fields %}{{ hidden }}{% endfor %}
+        <div><label>Cuenta</label>{{ line.account }}{% for e in line.account.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
+        <div><label>Debe</label>{{ line.debit_amount }}{% for e in line.debit_amount.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
+        <div><label>Haber</label>{{ line.credit_amount }}{% for e in line.credit_amount.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
+        <div><label>Detalle</label>{{ line.description }}</div>
+        <div><button type="button" class="btn danger remove" data-remove-line title="Quitar">×</button></div>
+        {% if line.non_field_errors %}<div class="field-error">{{ line.non_field_errors|join:" " }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    <template id="line-template">
+      <div class="line-row five">
+        {% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+        <div><label>Cuenta</label>{{ formset.empty_form.account }}</div>
+        <div><label>Debe</label>{{ formset.empty_form.debit_amount }}</div>
+        <div><label>Haber</label>{{ formset.empty_form.credit_amount }}</div>
+        <div><label>Detalle</label>{{ formset.empty_form.description }}</div>
+        <div><button type="button" class="btn danger remove" data-remove-line title="Quitar">×</button></div>
+      </div>
+    </template>
+  </div>
+  <div class="form-actions">
+    <button class="btn primary" type="submit">Registrar asiento</button>
+    <a class="btn" href="{% url 'panel:journal' %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

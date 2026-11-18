@@ -25,7 +25,14 @@
   /* ---------- confirmaciones ---------- */
   document.addEventListener('submit', (e) => {
     const msg = e.target.dataset.confirm;
-    if (msg && !window.confirm(msg)) e.preventDefault();
+    if (msg && !window.confirm(msg)) { e.preventDefault(); return; }
+    const ask = e.target.dataset.prompt;
+    if (ask) {
+      const reason = window.prompt(ask);
+      if (!reason || !reason.trim()) { e.preventDefault(); return; }
+      const hidden = e.target.querySelector('input[name=reason]');
+      if (hidden) hidden.value = reason.trim();
+    }
   });
 
   /* ---------- búsqueda y orden en tablas ---------- */
@@ -96,10 +103,18 @@
       row.classList.add('deleted');
     });
     const updateSum = () => {
-      let sum = 0;
-      $$('.line-row:not(.deleted) input[name$="-planned_amount"]', lines).forEach((i) => { sum += parseFloat(i.value) || 0; });
-      const out = $('#lines-total');
-      if (out) out.textContent = money(sum);
+      $$('[data-total-for]').forEach((out) => {
+        let sum = 0;
+        $$(`.line-row:not(.deleted) input${out.dataset.totalFor}`, lines).forEach((i) => { sum += parseFloat(i.value) || 0; });
+        out.textContent = money(sum);
+        out.dataset.value = sum;
+      });
+      const diff = $('#sum-diff'), d = $('[data-total-for*="debit"]'), c = $('[data-total-for*="credit"]');
+      if (diff && d && c) {
+        const delta = (parseFloat(d.dataset.value) || 0) - (parseFloat(c.dataset.value) || 0);
+        diff.textContent = money(Math.abs(delta));
+        diff.parentElement.classList.toggle('bad-total', Math.abs(delta) > 0.004);
+      }
     };
     lines.addEventListener('input', updateSum);
     lines.addEventListener('click', () => setTimeout(updateSum, 0));
@@ -187,4 +202,33 @@
                  plugins: { legend: { display: false }, tooltip: tooltipMoney(timeline.currency) } },
     });
   }
+
+  /* ---------- graficos genericos (data-chart) ---------- */
+  const colorOf = (name) => ({ green: css('--green-bright'), navy: css('--navy-2'), fuchsia: css('--fuchsia-bright'),
+    amber: '#e0a100', muted: css('--muted'), mint: '#5fd0a5', sky: '#4f7fb5', pink: '#f08cc4' }[name] || name);
+  $$('canvas[data-chart]').forEach((canvas) => {
+    const cfg = data(canvas.dataset.chart);
+    if (!cfg) return;
+    const pie = cfg.type === 'doughnut' || cfg.type === 'pie';
+    const datasets = cfg.datasets.map((d) => {
+      const out = Object.assign({}, d);
+      const col = Array.isArray(d.color) ? d.color.map(colorOf) : colorOf(d.color);
+      if (pie) { out.backgroundColor = col || palette(); out.borderColor = css('--surface'); out.borderWidth = 2; }
+      else if (cfg.type === 'line') { out.borderColor = col; out.backgroundColor = col; out.tension = .25; }
+      else { out.backgroundColor = col; out.borderRadius = 6; }
+      return out;
+    });
+    const money2 = (v) => `${money(v)} ${cfg.currency || ''}`.trim();
+    new Chart(canvas, {
+      type: cfg.type,
+      data: { labels: cfg.labels, datasets },
+      options: pie
+        ? { cutout: cfg.type === 'doughnut' ? '60%' : 0, plugins: { legend: { position: 'bottom' },
+            tooltip: { callbacks: { label: (c) => ` ${c.label}: ${money2(c.parsed)}` } } } }
+        : { indexAxis: cfg.horizontal ? 'y' : 'x',
+            scales: { x: { stacked: cfg.stacked, grid: { display: false } }, y: { stacked: cfg.stacked, beginAtZero: true } },
+            plugins: { legend: { display: datasets.length > 1 },
+              tooltip: { callbacks: { label: (c) => ` ${c.dataset.label ? c.dataset.label + ': ' : ''}${money2(cfg.horizontal ? c.parsed.x : c.parsed.y)}` } } } },
+    });
+  });
 })();

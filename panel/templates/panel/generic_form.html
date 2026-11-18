@@ -1,0 +1,30 @@
+{% extends "panel/base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+<a class="back" href="{{ back_url }}">← Volver</a>
+<div class="page-head"><div><h1>{{ page_title }}</h1>{% if page_sub %}<p class="sub">{{ page_sub }}</p>{% endif %}</div></div>
+{% if facts %}
+<div class="card" style="margin-bottom:18px"><dl class="facts">{% for label, value in facts %}<div><dt>{{ label }}</dt><dd>{{ value|default:"—" }}</dd></div>{% endfor %}</dl></div>
+{% endif %}
+<form method="post" class="card" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<p class="alert bad">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+  <div class="form-grid">
+    {% for field in form %}
+    <div class="{% if field.name in wide_fields %}wide{% endif %}">
+      {% if field.field.widget.input_type == 'checkbox' %}
+        <label class="check"><input type="checkbox" name="{{ field.html_name }}" id="{{ field.id_for_label }}" {% if field.value %}checked{% endif %}> {{ field.label }}</label>
+      {% else %}
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+      {% endif %}
+      {% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}
+      {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  <div class="form-actions">
+    <button class="btn primary" type="submit">{{ submit_label|default:"Guardar" }}</button>
+    <a class="btn" href="{{ back_url }}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

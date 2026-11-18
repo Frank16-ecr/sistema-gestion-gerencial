@@ -1,6 +1,5 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Count, Sum
 from django.shortcuts import get_object_or_404, redirect, render
@@ -14,8 +13,9 @@ from finance.expenses.models import Expense
 from finance.investments.models import Investment, InvestmentMovement
 from finance.investments.services import investment_summary, portfolio_summary
 
-from .access import SESSION_KEY, accessible_tenants, can_write, current_tenant
+from .access import accessible_tenants, current_tenant
 from .charts import execution_chart, investment_timeline, label_for, monthly_spending, portfolio_by_type
+from .common import context as _context, form_errors as _form_errors, require_write as _require_write
 from .forms import BudgetForm, BudgetLineFormSet, BudgetLineFormSetNew, ExpenseForm, InvestmentForm, MovementForm
 
 STATUS_ES = [('pending', 'Pendiente'), ('approved', 'Aprobado'), ('paid', 'Pagado'), ('rejected', 'Rechazado')]
@@ -27,19 +27,6 @@ CATEGORY_FILTER = [
 
 
 # --------------------------------------------------------------------------- helpers
-
-def _context(request, obj_tenant=None, **extra):
-    """Contexto comun. Si se ve un objeto de otra empresa, esa pasa a ser la seleccionada."""
-    if obj_tenant is not None:
-        request.session[SESSION_KEY] = obj_tenant.id
-    tenant, tenants = current_tenant(request)
-    return {'tenant': tenant, 'tenants': tenants, 'can_write': can_write(request.user, tenant), **extra}
-
-
-def _require_write(request, tenant):
-    if not can_write(request.user, tenant):
-        raise PermissionDenied('No tienes permiso de escritura en esta empresa.')
-
 
 def _with_labels(execution):
     for line in execution['lines']:
@@ -67,11 +54,6 @@ def _get_investment(request, pk):
 def _get_expense(request, pk):
     return get_object_or_404(Expense.objects.select_related('tenant'), pk=pk,
                              tenant__in=accessible_tenants(request.user))
-
-
-def _form_errors(form):
-    return ' '.join(f'{form.fields[f].label or f}: {" ".join(e)}' if f in form.fields else ' '.join(e)
-                    for f, e in form.errors.items())
 
 
 # --------------------------------------------------------------------------- resumen

@@ -1,0 +1,87 @@
+{% extends "panel/base.html" %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+{% if back_url %}<a class="back" href="{{ back_url }}">← {{ back_label|default:"Volver" }}</a>{% endif %}
+<div class="page-head">
+  <div>
+    <h1>{{ page_title }}{% for b in badges %} <span class="badge {{ b.cls }}" style="font-size:13px;vertical-align:middle">{{ b.text }}</span>{% endfor %}</h1>
+    {% if page_sub %}<p class="sub">{{ page_sub }}</p>{% endif %}
+  </div>
+  {% if page_actions %}<div class="actions">{% include "panel/_actions.html" with actions=page_actions %}</div>{% endif %}
+</div>
+
+{% if tabs %}
+<div class="tabs">{% for t in tabs %}<a href="{{ t.url }}" class="{% if t.active %}active{% endif %}">{{ t.label }}</a>{% endfor %}
+  <button type="button" class="btn small" onclick="window.print()" style="margin-left:auto">Imprimir</button></div>
+{% endif %}
+{% if report_form %}
+<form method="get" class="toolbar card" style="padding:12px 16px;margin-bottom:18px">
+  <input type="hidden" name="r" value="{{ report_key }}">
+  {% for field in report_form %}<div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+    {% for e in field.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>{% endfor %}
+  <button class="btn primary" type="submit">Calcular</button>
+</form>
+{% endif %}
+{% if notice %}<p class="alert info">{{ notice }}</p>{% endif %}
+
+{% if kpis %}
+<div class="grid kpis">
+  {% for k in kpis %}
+  <div class="card kpi {{ k.variant }}">
+    <div class="kpi-label">{{ k.label }}</div>
+    <div class="kpi-value {% if k.negative %}neg{% endif %}">{{ k.value }}</div>
+    {% if k.note %}<div class="kpi-note">{{ k.note }}</div>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if filters %}
+<form method="get" class="toolbar card" style="padding:12px 16px;margin-bottom:18px">
+  {% for fl in filters %}
+  <select name="{{ fl.name }}" aria-label="{{ fl.label }}" data-autosubmit>
+    <option value="">{{ fl.label }}: todos</option>
+    {% for value, label in fl.choices %}<option value="{{ value }}" {% if value|stringformat:"s" == fl.current %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  {% endfor %}
+  {% if filters_active %}<a class="btn small" href="?">Limpiar</a>{% endif %}
+</form>
+{% endif %}
+
+{% if charts %}
+<div class="grid two" style="margin-bottom:18px">
+  {% for c in charts %}
+  <div class="card"><h2>{{ c.title }}</h2><div class="chart-box {{ c.height }}"><canvas data-chart="{{ c.dom_id }}"></canvas></div></div>
+  {{ c.data|json_script:c.dom_id }}
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if facts %}
+<div class="card" style="margin-bottom:18px">
+  {% if facts_title %}<h2>{{ facts_title }}</h2>{% endif %}
+  <dl class="facts">
+    {% for label, value in facts %}<div><dt>{{ label }}</dt><dd>{{ value|default:"—" }}</dd></div>{% endfor %}
+  </dl>
+</div>
+{% endif %}
+
+{% for f in inline_forms %}
+<form method="post" action="{{ f.action }}" class="card" style="margin-bottom:18px" novalidate>
+  {% csrf_token %}
+  <h2>{{ f.title }}</h2>
+  {% if f.help %}<p class="sub" style="margin-top:-6px">{{ f.help }}</p>{% endif %}
+  <div class="mov-form" style="grid-template-columns: repeat({{ f.cols|default:4 }}, 1fr) auto">
+    {% for field in f.form %}
+    <div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+      {% for e in field.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
+    {% endfor %}
+    <button class="btn primary" type="submit">{{ f.submit }}</button>
+  </div>
+</form>
+{% endfor %}
+
+{% for t in tables %}{% include "panel/_table.html" %}{% endfor %}
+{% endblock %}
+{% block scripts_vendor %}{% if charts %}<script src="{% static 'panel/vendor/chart.umd.js' %}"></script>{% endif %}{% endblock %}

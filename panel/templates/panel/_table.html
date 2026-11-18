@@ -1,0 +1,34 @@
+<div class="card" style="margin-bottom:18px">
+  {% if t.title %}<h2>{{ t.title }}</h2>{% endif %}
+  {% if t.sub %}<p class="sub" style="margin-top:-6px">{{ t.sub }}</p>{% endif %}
+  {% if t.searchable %}
+  <div class="toolbar">
+    <input type="search" class="grow" placeholder="Buscar…" data-filter="#{{ t.id }}" data-count="#{{ t.id }}-count" aria-label="Buscar">
+    <small><span id="{{ t.id }}-count">{{ t.rows|length }}</span> registros</small>
+  </div>
+  {% endif %}
+  <div class="table-wrap">
+    <table id="{{ t.id }}">
+      <thead>
+        <tr>{% for c in t.columns %}<th {% if c.sort %}data-sort{% endif %} class="{% if c.num %}num{% endif %}">{{ c.label }}</th>{% endfor %}{% if t.has_actions %}<th></th>{% endif %}</tr>
+      </thead>
+      <tbody>
+        {% for row in t.rows %}
+        <tr data-row>
+          {% for c in row.cells %}
+          <td class="{% if c.num %}num{% endif %} {{ c.cls }}" {% if c.sort != '' %}data-sort="{{ c.sort }}"{% endif %}>
+            {% if c.badge %}<span class="badge {{ c.badge }}">{{ c.text }}</span>
+            {% elif c.href %}<a href="{{ c.href }}"><strong>{{ c.text }}</strong></a>
+            {% else %}{{ c.text }}{% endif %}
+            {% if c.sub %}<br><small>{{ c.sub }}</small>{% endif %}
+          </td>
+          {% endfor %}
+          {% if t.has_actions %}<td class="num">{% if row.actions %}{% include "panel/_actions.html" with actions=row.actions small=True %}{% endif %}</td>{% endif %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="{{ t.columns|length|add:1 }}" class="empty">{{ t.empty }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
