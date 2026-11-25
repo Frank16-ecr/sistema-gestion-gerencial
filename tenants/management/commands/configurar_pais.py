@@ -4,9 +4,12 @@ Ejemplos:
     python manage.py configurar_pais mi-empresa VE
     python manage.py configurar_pais mi-empresa VE --riesgo medio --salario-minimo 130
     python manage.py configurar_pais mi-empresa VE --moneda USD
+
+En Venezuela crea ademas el plan de cuentas basico (salvo --sin-plan-cuentas).
 """
 from django.core.management.base import BaseCommand, CommandError
 
+from finance.accounts.services import create_chart_of_accounts
 from finance.payroll.config import (
     COUNTRY_PRESETS, PAYROLL_CONFIG_KEY, VENEZUELA_IVSS_EMPLOYER_RATES, VENEZUELA_PAYROLL_CONFIG, PayrollConfigError,
     validate_payroll_config,
@@ -27,6 +30,8 @@ class Command(BaseCommand):
         parser.add_argument('--riesgo', choices=sorted(VENEZUELA_IVSS_EMPLOYER_RATES),
                             help='VE: riesgo de la actividad para el aporte patronal del IVSS (9/10/11 %%)')
         parser.add_argument('--salario-minimo', type=float, help='salario minimo mensual vigente')
+        parser.add_argument('--sin-plan-cuentas', action='store_true',
+                            help='VE: no crear el plan de cuentas basico')
         parser.add_argument('--piso-pensiones', type=float,
                             help='VE: base minima por trabajador de la contribucion de pensiones')
 
@@ -63,4 +68,7 @@ class Command(BaseCommand):
             tenant=tenant, setting_key=BASE_CURRENCY_KEY, defaults={'setting_value': currency})
         self.stdout.write(self.style.SUCCESS(
             f"{tenant.name}: nomina de {country} y moneda base {currency} configuradas."))
+        if country == 'VE' and not opts['sin_plan_cuentas']:
+            created = create_chart_of_accounts(tenant)
+            self.stdout.write(f'Plan de cuentas basico: {created} cuenta(s) creada(s).')
         self.stdout.write('Revisa con tu contador las tasas y topes vigentes antes de procesar la nomina.')

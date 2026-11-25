@@ -32,7 +32,10 @@ Backend financiero y gerencial **multiempresa** construido con Django REST Frame
 - **Contabilidad** de partida doble: plan de cuentas, asientos y líneas, en varias monedas.
 - **Facturación y cobros**: notas de cobro con su ciclo de vida, pagos, diferencias de cambio y retenciones.
 - **Gastos y reembolsos** con flujo de aprobación.
-- **Nómina** con impuestos y seguridad social **configurables por empresa**.
+- **Nómina mensual o quincenal** con impuestos y seguridad social **configurables por empresa**. Por defecto aplica las reglas venezolanas: ISLR por AR-I, IVSS y RPE por lunes, FAOV, INCES y pensiones.
+- **Facturación venezolana**: RIF, número de factura y número de control consecutivos, IVA general, reducido y de lujo, exentos, equivalente en Bs a tasa BCV, IGTF sobre pagos en divisas, retenciones de IVA, notas de crédito y débito, anulación y libro de ventas (exportable a Excel).
+- **Tasa BCV automática**: descarga diaria de la tasa oficial del Banco Central de Venezuela.
+- **Asientos contables automáticos** de facturas, cobros (con diferencial cambiario), retenciones y nómina, sobre un plan de cuentas venezolano básico.
 - **Obligaciones fiscales** con vencimientos y estados.
 - **Bancos y caja chica**, conciliaciones y cheques.
 - **Divisas**: tipos de cambio por fecha.
@@ -114,6 +117,8 @@ Copia `.env.example` a `.env` y ajusta:
 | `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_HOST` / `DB_PORT` | `sgg_db` … | Conexión a PostgreSQL |
 | `CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND` | `redis://localhost:6379/0` | Redis para Celery |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | Orígenes permitidos para un frontend externo |
+| `BCV_URL` | `https://www.bcv.org.ve/` | Página de la que se lee la tasa oficial |
+| `BCV_CA_BUNDLE` | `/etc/ssl/bcv-chain.pem` | Bundle de certificados propio, por si el certificado del BCV da error (TLS nunca se desactiva) |
 
 ## 5. Seguridad y roles
 
@@ -142,6 +147,8 @@ El sistema viene configurado para **Venezuela**: zona horaria `America/Caracas`,
 python manage.py configurar_pais mi-empresa VE --riesgo medio --salario-minimo 130
 ```
 
+En Venezuela este comando también crea el plan de cuentas básico (usa `--sin-plan-cuentas` para omitirlo). Para crearlo por separado: `python manage.py crear_plan_cuentas mi-empresa`.
+
 | Opción | Para qué sirve |
 | --- | --- |
 | `--riesgo bajo/medio/alto` | Aporte patronal del IVSS: 9 %, 10 % u 11 % |
@@ -154,8 +161,8 @@ python manage.py configurar_pais mi-empresa VE --riesgo medio --salario-minimo 1
 | Concepto | Trabajador | Patrono | Base | Tope |
 | --- | --- | --- | --- | --- |
 | ISLR | % del AR-I de cada trabajador | — | salario + asignaciones gravables | — |
-| IVSS | 4 % | 9 % (riesgo bajo, configurable) | salario | 5 salarios mínimos |
-| RPE (paro forzoso) | 0,5 % | 2 % | salario | 10 salarios mínimos |
+| IVSS | 4 % | 9 % (riesgo bajo, configurable) | salario semanal × lunes del periodo | 5 salarios mínimos |
+| RPE (paro forzoso) | 0,5 % | 2 % | salario semanal × lunes del periodo | 10 salarios mínimos |
 | FAOV | 1 % | 2 % | salario + asignaciones | — |
 | INCES | — | 2 % | salario + asignaciones | — |
 | Protección de Pensiones | — | 9 % | salario + bonificaciones | piso configurable |
@@ -163,6 +170,10 @@ python manage.py configurar_pais mi-empresa VE --riesgo medio --salario-minimo 1
 - El porcentaje de ISLR de cada trabajador se guarda en su ficha, en el campo `income_tax_rate`, según su formulario AR-I.
 - Cada aporte genera su propia obligación (`islr`, `ivss`, `rpe`, `faov`, `inces`, `pension`) con vencimiento el día 15 del mes siguiente. Ese día se puede cambiar en general o por aporte.
 - El detalle por aporte queda en cada línea de nómina (`contributions`) y los totales en la nómina (`contributions_summary`).
+- **IVSS y RPE se cotizan por semanas**: el salario mensual se convierte a semanal (× 12 / 52) y se multiplica por los lunes del periodo. Un mes con 5 lunes cotiza más que uno con 4.
+- **Quincenas**: `POST /api/finance/payroll/runs/run_monthly/` con `period` igual a `q1` (días 1 a 15) o `q2` (día 16 a fin de mes). Cada quincena paga la mitad del salario y de las asignaciones. Las obligaciones del mes suman ambas quincenas. Un mes se procesa o como mensual o por quincenas, nunca de las dos formas.
+- **Aprobación**: `POST /api/finance/payroll/runs/{id}/approve/` aprueba la nómina y registra su asiento (sueldos y aportes patronales contra sueldos por pagar, ISLR retenido y aportes por pagar). El estado y los totales solo cambian con estas acciones.
+- Solo entran en la nómina quienes ya habían ingresado y no habían egresado en el periodo.
 
 > ⚠️ Estas tasas y topes son **referencias de 2026** y pueden cambiar por Gaceta Oficial. El salario mínimo y el piso de la contribución de pensiones en particular deben confirmarse con tu contador antes de procesar una nómina real. Ninguna cifra está fija en el código: todas se ajustan en la configuración.
 
@@ -191,7 +202,28 @@ Basta con indicar lo que cambia respecto del preset del país:
 
 La configuración se valida al guardarla, y la API rechaza los valores inválidos.
 
-> Nota: la integración de facturación electrónica (EFRIS) es de Uganda. Para Venezuela habría que adaptarla a la normativa del SENIAT.
+### Tasa BCV
+
+- **Automática**: Celery Beat la descarga de lunes a viernes a las 6:15 pm (hora de Caracas) y la guarda con su *fecha valor* para cada empresa que contabiliza en bolívares. Si falla, reintenta cada 30 minutos.
+- **Manual**: `python manage.py actualizar_tasa_bcv`. Sin conexión, acepta la portada guardada: `--archivo portada.html`.
+- Facturas, cobros e IGTF usan la última tasa publicada en o antes de su fecha. Si no hay tasa, la operación se rechaza con un mensaje claro.
+
+### Facturación (`/api/finance/sales/`)
+
+1. **Datos fiscales**: registra en `taxpayer-profiles/` el RIF, la razón social y el domicilio fiscal de la empresa, y si es contribuyente especial o agente de percepción del IGTF.
+2. **Clientes** (`customers/`): RIF validado (`J-12345678-9`) y porcentaje de retención de IVA (0, 75 o 100 %) si el cliente es contribuyente especial.
+3. **Factura en borrador** (`invoices/`): líneas con alícuota `general` (16 %), `reduced` (8 %), `luxury` (16 % + 15 % adicional) o `exempt`, en VES o en divisas.
+4. **Emisión** (`invoices/{id}/issue/`): asigna el número de factura y el número de control (00-XXXXXXXX), ambos consecutivos y sin saltos; fija la tasa BCV; congela los datos del cliente; registra el asiento (CxC contra ventas e IVA débito fiscal) y actualiza el IVA del mes.
+5. **Cobros** (`invoices/{id}/pay/`): en cualquier moneda, a la tasa BCV del día. Si el pago es en divisas y la empresa es agente de percepción, se calcula el **IGTF del 3 %**. El **diferencial cambiario** entre la tasa de emisión y la del pago va a ganancia o pérdida.
+6. **Retención de IVA** (`invoices/{id}/withholding/`): comprobante de 14 dígitos del cliente especial (75 % o 100 % del IVA).
+7. **Correcciones**: los documentos emitidos no se editan ni se borran. Se corrigen con **notas de crédito o débito** (`doc_type` igual a `credit_note` o `debit_note`, con `related_invoice`) o se **anulan** (`void/`, con motivo), lo que conserva su número y revierte el asiento.
+8. **Libro de ventas**: `sales-book/?tenant_id=…&year=…&month=…`, en bolívares, con las notas de crédito en negativo y las anuladas marcadas. Con `&export=csv` se descarga para Excel.
+
+Las obligaciones **IVA** (débito fiscal del libro menos retenciones recibidas) e **IGTF** (percibido en los cobros) se generan solas para cada mes. Una obligación ya declarada o pagada no se modifica.
+
+> Alcance: no hay libro de compras, así que el crédito fiscal de compras se descuenta al hacer la declaración. La numeración se gestiona en el sistema; para facturación digital homologada por el SENIAT (Providencia SNAT/2024/000102) hay que integrar una imprenta digital autorizada que asigne los números de control.
+
+> El módulo `invoicing` (notas de cobro con EFRIS) viene del proyecto original y es de Uganda. Para Venezuela usa `sales`.
 
 ## 7. Panel gerencial
 
@@ -223,6 +255,7 @@ Documentación interactiva: `/api/docs/` (Swagger), `/api/redoc/` y el esquema e
 | `/api/finance/fx/` | Tipos de cambio |
 | `/api/finance/budgets/` | Presupuestos (`approve`, `execution`) y sus líneas |
 | `/api/finance/investments/` | Inversiones (`summary`, `portfolio`) y movimientos |
+| `/api/finance/sales/` | Facturación venezolana: datos fiscales, clientes, facturas (`issue`, `pay`, `withholding`, `void`), cobros, retenciones y `sales-book/` |
 | `/api/finance/security/` | Roles por empresa (`roles/mine/`) |
 | `/api/finance/audit/` | Bitácora (solo lectura) |
 | `/api/finance/reports/` | Reportes (ver abajo) |
@@ -243,17 +276,18 @@ Reportes (todos llevan `tenant_id`):
 | --- | --- | --- |
 | `tenants` | Tenant, TenantSetting | `tenants/config.py`: configuración por empresa |
 | `finance.security` | UserTenantRole | `permissions.py`: aislamiento y roles |
-| `finance.accounts` | Account, JournalEntry, JournalLine | — |
+| `finance.accounts` | Account, JournalEntry, JournalLine | `services.py`: asientos automáticos y plan de cuentas |
 | `finance.invoicing` | FeeNote, FeeNoteReminder | `FeeNoteService` |
 | `finance.payments` | FeeNotePayment, WHTCredit | `PaymentService` |
 | `finance.expenses` | Expense, ReimbursementRequest, ReimbursementBatch | — |
 | `finance.payroll` | EmployeePayrollProfile, EmployeeAllowance, PayrollRun, PayrollLine | `PayrollService`, `config.py` |
 | `finance.statutory` | StatutoryObligation | — |
 | `finance.banking` | BankAccount, BankReconciliation, PettyCashTransaction, Cheque | — |
-| `finance.fx` | ExchangeRate | — |
+| `finance.fx` | ExchangeRate | `services.py`: tasa BCV y `get_rate` |
 | `finance.budgets` | Budget, BudgetLine | `services.budget_execution` |
 | `finance.investments` | Investment, InvestmentMovement | `services.investment_summary` |
 | `finance.reports` | — | `ReportService` |
+| `finance.sales` | TaxpayerProfile, Customer, Invoice, InvoiceLine, InvoicePayment, VatWithholding | `services.py`: emisión, cobros, IGTF, libro de ventas |
 | `finance.audit` | AuditLog | — |
 | `panel` | — | Panel web gerencial |
 
@@ -278,7 +312,7 @@ El CI (GitHub Actions) ejecuta en Python 3.11 y 3.12 los chequeos de Django, la 
 |-- finance/
 |   |-- accounts/  invoicing/  payments/  expenses/  payroll/
 |   |-- statutory/  banking/  fx/  audit/  reports/
-|   `-- security/  budgets/  investments/
+|   `-- security/  budgets/  investments/  sales/
 |-- panel/               # panel web
 |-- templates/           # plantillas HTML (panel y login)
 `-- tests/

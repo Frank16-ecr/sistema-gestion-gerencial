@@ -60,3 +60,13 @@ class PanelTests(ManagementTestBase):
         # Con LANGUAGE_CODE=es un float se mostraria '33,33': el CSS necesita punto decimal.
         self.assertContains(response, 'width:33.33')
         self.assertContains(response, 'Alquiler')
+
+    def test_shows_latest_bcv_rate(self):
+        from finance.fx.models import ExchangeRate
+        for day, rate in ((1, '400'), (20, '420.5')):
+            ExchangeRate.objects.create(tenant=self.tenant1, from_currency='USD', to_currency='VES',
+                                        rate=Decimal(rate), rate_date=date(2026, 11, day), source='bcv')
+        self.login(self.manager)
+        response = self.client.get('/panel/')
+        self.assertContains(response, '420,5000')
+        self.assertContains(response, '(BCV, 20/11/2026)')

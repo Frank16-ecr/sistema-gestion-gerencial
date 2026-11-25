@@ -1,14 +1,16 @@
 """Nomina con el preset de Venezuela (ISLR por AR-I, IVSS, RPE, FAOV, INCES, pensiones).
 
-Caso de referencia, calculado a mano con salario minimo Bs 130:
+Caso de referencia (noviembre 2026, 5 lunes), calculado a mano con salario minimo Bs 130:
 salario 1.000 + bono 500 = 1.500 (base "total").
-- IVSS  base min(1000, 5x130=650) = 650   -> trabajador 4% 26,00  | patrono 9% 58,50
-- RPE   base min(1000, 10x130=1300) = 1000 -> trabajador 0,5% 5,00 | patrono 2% 20,00
-- FAOV  base 1.500                          -> trabajador 1% 15,00  | patrono 2% 30,00
-- INCES base 1.500                          ->                        patrono 2% 30,00
-- Pensiones base 1.500                      ->                        patrono 9% 135,00
+- IVSS  (semanal) base mensual min(1000, 5x130=650) = 650 -> semanal 650x12/52 = 150 -> x5 lunes = 750
+        trabajador 4% 30,00 | patrono 9% 67,50
+- RPE   (semanal) base mensual min(1000, 1300) = 1000 -> 1000x12/52x5 = 1.153,85
+        trabajador 0,5% 5,77 | patrono 2% 23,08
+- FAOV  base 1.500 -> trabajador 1% 15,00 | patrono 2% 30,00
+- INCES base 1.500 ->                       patrono 2% 30,00
+- Pensiones base 1.500 ->                   patrono 9% 135,00
 - ISLR 2% (AR-I) sobre 1.500 = 30,00
-Neto = 1.500 - 30 - (26 + 5 + 15) = 1.424,00
+Neto = 1.500 - 30 - (30 + 5,77 + 15) = 1.419,23
 """
 from datetime import date
 from decimal import Decimal
@@ -58,14 +60,15 @@ class VenezuelaPayrollTests(TestCase):
         self.add_employee()
         run = PayrollService.run_monthly_payroll(self.tenant, 11, 2026, self.user)
         line = run.lines.get()
+        self.assertEqual(run.mondays, 5)
         self.assertEqual(line.paye, Decimal('30.00'))
-        self.assertEqual(line.nssf_employee, Decimal('46.00'))
-        self.assertEqual(line.nssf_employer, Decimal('273.50'))
-        self.assertEqual(line.net_pay, Decimal('1424.00'))
-        self.assertEqual(line.contributions['ivss'], {'base': '650', 'employee': '26.00', 'employer': '58.50'})
+        self.assertEqual(line.nssf_employee, Decimal('50.77'))
+        self.assertEqual(line.nssf_employer, Decimal('285.58'))
+        self.assertEqual(line.net_pay, Decimal('1419.23'))
+        self.assertEqual(line.contributions['ivss'], {'base': '750.00', 'employee': '30.00', 'employer': '67.50'})
         self.assertEqual(run.contributions_summary['pension']['employer'], '135.00')
         self.assertEqual(self.obligations(), {
-            'islr': Decimal('30.00'), 'ivss': Decimal('84.50'), 'rpe': Decimal('25.00'),
+            'islr': Decimal('30.00'), 'ivss': Decimal('97.50'), 'rpe': Decimal('28.85'),
             'faov': Decimal('45.00'), 'inces': Decimal('30.00'), 'pension': Decimal('135.00'),
         })
         due = StatutoryObligation.objects.get(tenant=self.tenant, obligation_type='ivss').due_date
@@ -82,8 +85,8 @@ class VenezuelaPayrollTests(TestCase):
                                      setting_value={'minimum_wage': 1000})
         self.add_employee(bonus=None)
         run = PayrollService.run_monthly_payroll(self.tenant, 11, 2026, self.user)
-        # Con salario minimo 1.000 el tope del IVSS (5.000) ya no recorta: 4% de 1.000.
-        self.assertEqual(run.lines.get().contributions['ivss']['employee'], '40.00')
+        # Con salario minimo 1.000 el tope del IVSS (5.000) ya no recorta: 1000x12/52x5 lunes x 4%.
+        self.assertEqual(run.lines.get().contributions['ivss']['employee'], '46.15')
 
     def test_pension_floor_and_contribution_due_day(self):
         config = validate_payroll_config({'country': 'VE'})

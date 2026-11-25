@@ -24,7 +24,8 @@ Estructura completa (todas las claves son opcionales):
                 "cap_minimum_wages": 5,   # tope de la base en salarios minimos (opcional)
                 "cap_amount": null,       # tope de la base en importe fijo (opcional)
                 "floor_amount": null,     # base minima por trabajador (opcional)
-                "due_day": 5              # vencimiento propio (opcional)
+                "due_day": 5,             # vencimiento propio (opcional)
+                "weekly": true            # cotizacion semanal: base x 12/52 x lunes del periodo
             }
         ]
     }
@@ -72,7 +73,8 @@ UGANDA_PAYROLL_CONFIG = {
 # Venezuela (referencias de 2026; verificar contra la Gaceta Oficial vigente).
 # - ISLR: retencion por trabajador segun el porcentaje del AR-I (Decreto 1.808).
 # - IVSS: 4% trabajador; patrono 9%, 10% u 11% segun el riesgo; tope 5 salarios minimos.
-# - RPE (paro forzoso): 0,5% trabajador, 2% patrono; tope 10 salarios minimos.
+#   Cotizacion semanal: (salario mensual x 12 / 52) x numero de lunes del periodo.
+# - RPE (paro forzoso): 0,5% trabajador, 2% patrono; tope 10 salarios minimos; semanal como el IVSS.
 # - FAOV (BANAVIH): 1% trabajador, 2% patrono, sobre el salario integral, sin tope.
 # - INCES: 2% patrono sobre la nomina (el 0,5% del trabajador es sobre utilidades).
 # - Proteccion de Pensiones: 9% patrono sobre salarios y bonificaciones; la base por
@@ -88,9 +90,9 @@ VENEZUELA_PAYROLL_CONFIG = {
     },
     'contributions': [
         {'code': 'ivss', 'name': 'Seguro Social (IVSS)', 'employee_rate': 4, 'employer_rate': 9,
-         'base': 'salary', 'cap_minimum_wages': 5},
+         'base': 'salary', 'cap_minimum_wages': 5, 'weekly': True},
         {'code': 'rpe', 'name': 'Regimen Prestacional de Empleo', 'employee_rate': 0.5, 'employer_rate': 2,
-         'base': 'salary', 'cap_minimum_wages': 10},
+         'base': 'salary', 'cap_minimum_wages': 10, 'weekly': True},
         {'code': 'faov', 'name': 'Vivienda y Habitat (FAOV)', 'employee_rate': 1, 'employer_rate': 2,
          'base': 'total'},
         {'code': 'inces', 'name': 'INCES', 'employee_rate': 0, 'employer_rate': 2, 'base': 'total'},

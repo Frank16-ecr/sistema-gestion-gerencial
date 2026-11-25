@@ -114,7 +114,7 @@ class PayrollServiceTest(TestCase):
             user=self.user,
             employee_number="EMP001",
             gross_salary=Decimal('2000000'),
-            start_date=date.today(),
+            start_date=date(2025, 1, 1),  # debe haber ingresado antes del periodo
         )
         payroll_run = PayrollService.run_monthly_payroll(self.tenant, 6, 2025, self.user)
         self.assertIsNotNone(payroll_run)

@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from celery.schedules import crontab
 from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -36,6 +37,7 @@ INSTALLED_APPS = [
     'finance.security',
     'finance.budgets',
     'finance.investments',
+    'finance.sales',
     # Interfaz web
     'panel',
 ]
@@ -143,5 +145,17 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+
+# Tasa oficial del Banco Central de Venezuela
+BCV_URL = config('BCV_URL', default='https://www.bcv.org.ve/')
+BCV_CA_BUNDLE = config('BCV_CA_BUNDLE', default='')  # bundle de CA propio si el certificado del BCV falla
+
+CELERY_BEAT_SCHEDULE = {
+    # De lunes a viernes a las 6:15 pm (hora de Caracas), tras la publicacion del BCV.
+    'actualizar-tasa-bcv': {
+        'task': 'finance.fx.tasks.update_bcv_rates_task',
+        'schedule': crontab(hour=18, minute=15, day_of_week='mon-fri'),
+    },
+}
 
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000').split(',')

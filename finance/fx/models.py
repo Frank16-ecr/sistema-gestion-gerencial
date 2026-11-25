@@ -8,6 +8,7 @@ class ExchangeRate(models.Model):
     SOURCE_CHOICES = [
         ("manual", "Manual"),
         ("automatic", "Automatic"),
+        ("bcv", "BCV (oficial)"),
     ]
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name='exchange_rates')
     from_currency = models.CharField(max_length=10)

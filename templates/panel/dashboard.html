@@ -9,7 +9,8 @@
   </div>
 {% else %}
 <h1>{{ tenant.name }}</h1>
-<p class="muted">Resumen del {{ start_date|date:"d/m/Y" }} al {{ end_date|date:"d/m/Y" }} · Moneda base: {{ data.base_currency }}</p>
+<p class="muted">Resumen del {{ start_date|date:"d/m/Y" }} al {{ end_date|date:"d/m/Y" }} · Moneda base: {{ data.base_currency }}
+  {% for cur, r in data.exchange_rates.items %}{% if cur == "USD" or cur == "EUR" %} · <strong>{{ cur }}</strong> {{ r.rate|floatformat:"4g" }} {{ data.base_currency }}{% if r.source == "bcv" %} (BCV{% else %} ({{ r.source }}{% endif %}, {{ r.date|date:"d/m/Y" }}){% endif %}{% endfor %}</p>
 
 <form class="filters card" method="get">
   <label>Empresa

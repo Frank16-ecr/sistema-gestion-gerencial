@@ -224,6 +224,16 @@ class ReportService:
         return {r['currency']: {'accounts': r['accounts'], 'balance': _sum(r['balance'])} for r in rows}
 
     @staticmethod
+    def _latest_rates(tenant, base):
+        from finance.fx.models import ExchangeRate
+
+        rates = {}
+        for row in ExchangeRate.objects.filter(tenant=tenant, to_currency=base).order_by('-rate_date', '-id'):
+            if row.from_currency not in rates:
+                rates[row.from_currency] = {'rate': row.rate, 'date': row.rate_date, 'source': row.source}
+        return rates
+
+    @staticmethod
     def _alerts(data):
         from finance.expenses.models import Expense
 
@@ -269,9 +279,11 @@ class ReportService:
         from tenants.config import base_currency
 
         today = today or date.today()
+        currency = base_currency(tenant)
         data = {
             'tenant': {'id': tenant.id, 'name': tenant.name},
-            'base_currency': base_currency(tenant),
+            'base_currency': currency,
+            'exchange_rates': ReportService._latest_rates(tenant, currency),
             'period_start': str(start_date),
             'period_end': str(end_date),
             'income_statement': ReportService.get_income_statement(tenant, start_date, end_date),
