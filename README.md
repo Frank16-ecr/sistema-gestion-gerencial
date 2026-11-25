@@ -109,7 +109,8 @@ Copia `.env.example` a `.env` y ajusta:
 | `ALLOWED_HOSTS` | `localhost,127.0.0.1` | Hosts permitidos |
 | `LANGUAGE_CODE` | `es` | Idioma de la interfaz |
 | `TIME_ZONE` | `America/Caracas` | Zona horaria del país de operación |
-| `DEFAULT_CURRENCY` | `USD` | Moneda por defecto de los registros y moneda base global |
+| `DEFAULT_CURRENCY` | `VES` | Moneda por defecto de los registros y moneda base global |
+| `PAYROLL_COUNTRY` | `VE` | Preset de nómina para las empresas sin configuración propia (`VE` o `UG`) |
 | `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_HOST` / `DB_PORT` | `sgg_db` … | Conexión a PostgreSQL |
 | `CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND` | `redis://localhost:6379/0` | Redis para Celery |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | Orígenes permitidos para un frontend externo |
@@ -133,40 +134,64 @@ Cada usuario recibe un rol por empresa (`/api/finance/security/roles/`, gestiona
 
 ## 6. Adaptar a tu país o empresa
 
-Los parámetros que dependen del país se guardan **por empresa** como `TenantSetting` (`/api/tenants/settings/`), sin tocar el código:
+El sistema viene configurado para **Venezuela**: zona horaria `America/Caracas`, moneda base en bolívares (`VES`) y nómina venezolana. Cada empresa puede ajustar estos valores con `TenantSetting` (`/api/tenants/settings/`) sin tocar el código.
 
-**Moneda base** (clave `base_currency`):
+### Configuración rápida de una empresa
 
-```json
-"USD"
+```bash
+python manage.py configurar_pais mi-empresa VE --riesgo medio --salario-minimo 130
 ```
 
-**Nómina** (clave `payroll_config`). Solo hace falta incluir lo que cambia; lo que no se indique toma los valores por defecto, que son las reglas originales de Uganda (PAYE + NSSF):
+| Opción | Para qué sirve |
+| --- | --- |
+| `--riesgo bajo/medio/alto` | Aporte patronal del IVSS: 9 %, 10 % u 11 % |
+| `--salario-minimo` | Salario mínimo mensual, que fija los topes del IVSS y del RPE |
+| `--piso-pensiones` | Base mínima por trabajador de la contribución de pensiones (ingreso mínimo integral indexado) |
+| `--moneda USD` | Moneda base distinta de VES |
+
+### Nómina venezolana (preset `VE`)
+
+| Concepto | Trabajador | Patrono | Base | Tope |
+| --- | --- | --- | --- | --- |
+| ISLR | % del AR-I de cada trabajador | — | salario + asignaciones gravables | — |
+| IVSS | 4 % | 9 % (riesgo bajo, configurable) | salario | 5 salarios mínimos |
+| RPE (paro forzoso) | 0,5 % | 2 % | salario | 10 salarios mínimos |
+| FAOV | 1 % | 2 % | salario + asignaciones | — |
+| INCES | — | 2 % | salario + asignaciones | — |
+| Protección de Pensiones | — | 9 % | salario + bonificaciones | piso configurable |
+
+- El porcentaje de ISLR de cada trabajador se guarda en su ficha, en el campo `income_tax_rate`, según su formulario AR-I.
+- Cada aporte genera su propia obligación (`islr`, `ivss`, `rpe`, `faov`, `inces`, `pension`) con vencimiento el día 15 del mes siguiente. Ese día se puede cambiar en general o por aporte.
+- El detalle por aporte queda en cada línea de nómina (`contributions`) y los totales en la nómina (`contributions_summary`).
+
+> ⚠️ Estas tasas y topes son **referencias de 2026** y pueden cambiar por Gaceta Oficial. El salario mínimo y el piso de la contribución de pensiones en particular deben confirmarse con tu contador antes de procesar una nómina real. Ninguna cifra está fija en el código: todas se ajustan en la configuración.
+
+### Configuración avanzada (clave `payroll_config`)
+
+Basta con indicar lo que cambia respecto del preset del país:
 
 ```json
 {
-  "income_tax": {
-    "code": "income_tax",
-    "bands": [[1000, 0], [3000, 10], [null, 20]]
-  },
-  "social_security": {
-    "code": "social_security",
-    "employee_rate": 4,
-    "employer_rate": 9,
-    "monthly_cap": 5000
-  },
-  "due_day": 15
+  "country": "VE",
+  "minimum_wage": 130,
+  "due_day": 15,
+  "contributions": [
+    {"code": "ivss", "name": "Seguro Social", "employee_rate": 4, "employer_rate": 10,
+     "base": "salary", "cap_minimum_wages": 5},
+    {"code": "pension", "name": "Pensiones", "employee_rate": 0, "employer_rate": 9,
+     "base": "total", "floor_amount": 5000, "due_day": 5}
+  ]
 }
 ```
 
-- `bands`: tramos progresivos `[límite superior mensual, tasa %]`. El último lleva `null` (sin tope).
-- `monthly_cap`: tope de la base de cotización (`null` = sin tope).
-- `code`: tipo de obligación que se genera al ejecutar la nómina.
-- `due_day`: día del mes siguiente en que vencen las obligaciones.
+- `contributions` reemplaza la lista completa de aportes. Cada aporte acepta `base` (`salary` o `total`), `cap_minimum_wages`, `cap_amount`, `floor_amount` y `due_day`.
+- `income_tax.method` puede ser `employee_rate` (porcentaje por trabajador) o `bands`, con tramos progresivos `[[límite, tasa %], …, [null, tasa %]]`.
+- La moneda base se define con la clave `base_currency` (por ejemplo, `"VES"` o `"USD"`).
+- También existe el preset `UG` (Uganda, PAYE + NSSF), que son las reglas originales del proyecto.
 
-La configuración se valida al guardarla y la API rechaza los tramos mal formados.
+La configuración se valida al guardarla, y la API rechaza los valores inválidos.
 
-> Nota: la integración de facturación electrónica (EFRIS) es específica de Uganda. Si tu país usa otro sistema, ese conector debe adaptarse.
+> Nota: la integración de facturación electrónica (EFRIS) es de Uganda. Para Venezuela habría que adaptarla a la normativa del SENIAT.
 
 ## 7. Panel gerencial
 

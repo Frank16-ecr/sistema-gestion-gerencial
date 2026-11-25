@@ -9,6 +9,15 @@ class StatutoryObligation(models.Model):
         ("income_tax", "Impuesto sobre la renta"),
         ("wht", "Retención en la fuente"),
         ("social_security", "Seguridad social"),
+        # Venezuela
+        ("islr", "ISLR (retención a trabajadores)"),
+        ("ivss", "IVSS (Seguro Social)"),
+        ("rpe", "RPE (paro forzoso)"),
+        ("faov", "FAOV (vivienda)"),
+        ("inces", "INCES"),
+        ("pension", "Protección de Pensiones"),
+        ("iva", "IVA"),
+        ("igtf", "IGTF"),
         ("other", "Otra obligacion"),
     ]
     STATUS_CHOICES = [

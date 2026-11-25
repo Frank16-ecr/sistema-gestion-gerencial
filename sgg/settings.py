@@ -91,10 +91,12 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Regionalizacion: ajustala en .env segun el pais de operacion.
 LANGUAGE_CODE = config('LANGUAGE_CODE', default='es')
-TIME_ZONE = config('TIME_ZONE', default='UTC')
+TIME_ZONE = config('TIME_ZONE', default='America/Caracas')
 # Moneda por defecto de los registros y moneda base de las empresas que no
 # configuren la suya (TenantSetting 'base_currency').
-DEFAULT_CURRENCY = config('DEFAULT_CURRENCY', default='USD')
+DEFAULT_CURRENCY = config('DEFAULT_CURRENCY', default='VES')
+# Preset de nomina para las empresas sin configuracion propia ('VE' o 'UG').
+PAYROLL_COUNTRY = config('PAYROLL_COUNTRY', default='VE')
 USE_I18N = True
 USE_TZ = True
 

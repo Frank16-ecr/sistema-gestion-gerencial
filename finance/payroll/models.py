@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -11,6 +12,12 @@ class EmployeePayrollProfile(models.Model):
     bank_name = models.CharField(max_length=100, blank=True)
     bank_account_number = models.CharField(max_length=50, blank=True)
     gross_salary = models.DecimalField(max_digits=18, decimal_places=2)
+    income_tax_rate = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Porcentaje de retencion del impuesto sobre la renta del trabajador "
+                  "(en Venezuela, el del formulario AR-I). Se usa con income_tax.method='employee_rate'.",
+    )
     is_active = models.BooleanField(default=True)
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
@@ -56,6 +63,9 @@ class PayrollRun(models.Model):
     total_nssf_employee = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     total_nssf_employer = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     total_net = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    contributions_summary = models.JSONField(
+        default=dict, blank=True, help_text="Totales de trabajador y patrono por aporte (ivss, faov...).",
+    )
     approved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='approved_payrolls',
     )
@@ -82,6 +92,9 @@ class PayrollLine(models.Model):
     nssf_employee = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     nssf_employer = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     net_pay = models.DecimalField(max_digits=18, decimal_places=2)
+    contributions = models.JSONField(
+        default=dict, blank=True, help_text="Detalle por aporte: base, trabajador, patrono.",
+    )
     notes = models.TextField(blank=True)
 
     def __str__(self):

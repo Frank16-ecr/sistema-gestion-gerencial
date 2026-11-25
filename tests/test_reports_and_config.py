@@ -151,7 +151,8 @@ class PayrollConfigTests(TestCase):
         self.tenant = Tenant.objects.create(name='Otra', slug='otra')
         self.user = get_user_model().objects.create_user('emp', password='x')
 
-    def test_defaults_keep_uganda_rules(self):
+    def test_uganda_preset_keeps_original_rules(self):
+        TenantSetting.objects.create(tenant=self.tenant, setting_key='payroll_config', setting_value={'country': 'UG'})
         config = get_payroll_config(self.tenant)
         self.assertEqual(config['income_tax']['code'], 'paye')
         self.assertEqual(PayrollService.calculate_paye(Decimal('300000')), Decimal('6500.00'))

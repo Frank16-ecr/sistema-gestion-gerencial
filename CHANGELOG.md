@@ -18,11 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - La lógica de ejecución presupuestaria y de portafolio de inversiones se movió a `services.py` para poder reutilizarla.
 
 ### Añadido
+- **Venezuela como país por defecto** (zona horaria `America/Caracas`, moneda `VES`, `PAYROLL_COUNTRY=VE`):
+  - ISLR retenido con el porcentaje AR-I de cada trabajador (campo `income_tax_rate`).
+  - Aportes IVSS, RPE, FAOV, INCES y Protección de Pensiones, con base, topes en salarios mínimos, piso y vencimiento configurables, y una obligación por aporte.
+  - Detalle de aportes por línea de nómina (`contributions`) y por nómina (`contributions_summary`).
+  - Comando `configurar_pais` para configurar una empresa (riesgo del IVSS, salario mínimo, piso de pensiones, moneda).
+  - Tipos de obligación venezolanos: ISLR, IVSS, RPE, FAOV, INCES, pensiones, IVA e IGTF.
+- El motor de nómina admite varios aportes por empresa y dos métodos de impuesto (`bands` y `employee_rate`). Uganda sigue disponible como preset `UG`.
 - Reportes nuevos: **balance general** (`balance-sheet/`) y **resumen gerencial** (`dashboard/`) con alertas.
 - **Panel web** en `/panel/` con inicio de sesión, selección de empresa y periodo, modo claro y oscuro y diseño adaptable a móvil.
 - Configuración de pytest (`pytest-django`) y de cobertura; nuevos objetivos `make pytest`, `make coverage` e `install-dev`.
 - El CI comprueba que no falten migraciones y mide la cobertura.
-- 41 pruebas nuevas (85 en total): aislamiento entre empresas, reportes, nómina configurable y panel.
+- 50 pruebas nuevas (94 en total): aislamiento entre empresas, reportes, nómina configurable y panel.
 
 ### Corregido
 - **Seguridad**: los módulos originales (contabilidad, facturación, pagos, gastos, nómina, obligaciones, bancos, divisas, auditoría, empresas y reportes) solo exigían inicio de sesión, así que cualquier usuario podía leer y modificar datos de todas las empresas. Ahora todos filtran por empresa y por rol. Los salarios y la bitácora quedan restringidos a administración, gerencia y auditoría.
