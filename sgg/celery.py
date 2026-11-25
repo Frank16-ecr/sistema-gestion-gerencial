@@ -1,9 +1,10 @@
 import os
+
 from celery import Celery
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'zelani.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sgg.settings')
 
-app = Celery('zelani')
+app = Celery('sgg')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 

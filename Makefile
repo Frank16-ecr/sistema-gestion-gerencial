@@ -1,8 +1,8 @@
-.PHONY: help install migrate run test lint format docker-up docker-down docker-logs shell
+.PHONY: help install install-dev migrate run test pytest coverage lint format docker-up docker-down docker-logs shell
 
 PYTHON   = python
 MANAGE   = $(PYTHON) manage.py
-TEST_SETTINGS = zelani.test_settings
+TEST_SETTINGS = sgg.test_settings
 
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -12,6 +12,9 @@ help: ## Show this help message
 
 install: ## Install Python dependencies
 	pip install -r requirements.txt
+
+install-dev: ## Install development dependencies (tests, lint)
+	pip install -r requirements-dev.txt
 
 migrate: ## Run database migrations
 	$(MANAGE) migrate
@@ -36,6 +39,12 @@ collectstatic: ## Collect static files
 test: ## Run the test suite (uses SQLite in-memory)
 	$(MANAGE) test tests/ --settings=$(TEST_SETTINGS) --verbosity=2
 
+pytest: ## Run the test suite with pytest
+	pytest
+
+coverage: ## Run tests with coverage report
+	coverage run -m pytest && coverage report --skip-covered
+
 check: ## Run Django system checks
 	$(MANAGE) check
 
@@ -53,10 +62,10 @@ format: isort lint ## Format code and check linting
 # ── Celery ────────────────────────────────────────────────────────────────────
 
 worker: ## Start Celery worker
-	celery -A zelani worker -l info
+	celery -A sgg worker -l info
 
 beat: ## Start Celery Beat scheduler
-	celery -A zelani beat -l info
+	celery -A sgg beat -l info
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 

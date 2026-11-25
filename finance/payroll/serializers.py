@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import EmployeePayrollProfile, EmployeeAllowance, PayrollRun, PayrollLine
+
+from .models import EmployeeAllowance, EmployeePayrollProfile, PayrollLine, PayrollRun
 
 
 class EmployeeAllowanceSerializer(serializers.ModelSerializer):

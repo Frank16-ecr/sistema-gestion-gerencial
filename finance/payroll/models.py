@@ -1,5 +1,5 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
 
 
 class EmployeePayrollProfile(models.Model):
@@ -56,9 +56,13 @@ class PayrollRun(models.Model):
     total_nssf_employee = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     total_nssf_employer = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     total_net = models.DecimalField(max_digits=18, decimal_places=2, default=0)
-    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='approved_payrolls')
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='approved_payrolls',
+    )
     approved_at = models.DateTimeField(null=True, blank=True)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='created_payrolls')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='created_payrolls',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

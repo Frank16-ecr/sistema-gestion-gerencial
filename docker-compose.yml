@@ -4,7 +4,7 @@ services:
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME:-zelani_db}
+      POSTGRES_DB: ${DB_NAME:-sgg_db}
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
     volumes:
@@ -52,7 +52,7 @@ services:
   worker:
     build: .
     restart: unless-stopped
-    command: celery -A zelani worker -l info -c 4
+    command: celery -A sgg worker -l info -c 4
     volumes:
       - .:/app
       - media_files:/app/media
@@ -71,7 +71,7 @@ services:
   beat:
     build: .
     restart: unless-stopped
-    command: celery -A zelani beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    command: celery -A sgg beat -l info --schedule /tmp/celerybeat-schedule
     volumes:
       - .:/app
     env_file: .env

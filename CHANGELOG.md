@@ -9,8 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Initial implementation of the Zelani Finance Module
+### Cambiado
+- El proyecto pasa a llamarse **SGG · Sistema de Gestión Gerencial**: el paquete `zelani` ahora es `sgg`, junto con la base de datos por defecto (`sgg_db`), el usuario de Docker, Celery, el CI y la documentación. El README está en español y sus badges apuntan a `Frank16-ecr/sistema-gestion-gerencial`.
+- Idioma por defecto en español; `LANGUAGE_CODE`, `TIME_ZONE` y `DEFAULT_CURRENCY` se configuran por variables de entorno.
+- Las monedas por defecto de los modelos salen de `DEFAULT_CURRENCY`, y la moneda base puede definirse por empresa (`TenantSetting` con clave `base_currency`).
+- La nómina admite tramos de impuesto, seguridad social (con tope), códigos de obligación y día de vencimiento configurables por empresa (`payroll_config`). Por defecto se mantienen las reglas de Uganda.
+- Las categorías de gasto y los tipos de obligación tienen etiquetas en español.
+- La lógica de ejecución presupuestaria y de portafolio de inversiones se movió a `services.py` para poder reutilizarla.
+
+### Añadido
+- Reportes nuevos: **balance general** (`balance-sheet/`) y **resumen gerencial** (`dashboard/`) con alertas.
+- **Panel web** en `/panel/` con inicio de sesión, selección de empresa y periodo, modo claro y oscuro y diseño adaptable a móvil.
+- Configuración de pytest (`pytest-django`) y de cobertura; nuevos objetivos `make pytest`, `make coverage` e `install-dev`.
+- El CI comprueba que no falten migraciones y mide la cobertura.
+- 41 pruebas nuevas (85 en total): aislamiento entre empresas, reportes, nómina configurable y panel.
+
+### Corregido
+- **Seguridad**: los módulos originales (contabilidad, facturación, pagos, gastos, nómina, obligaciones, bancos, divisas, auditoría, empresas y reportes) solo exigían inicio de sesión, así que cualquier usuario podía leer y modificar datos de todas las empresas. Ahora todos filtran por empresa y por rol. Los salarios y la bitácora quedan restringidos a administración, gerencia y auditoría.
+- `/api/tenants/settings/` era inalcanzable: la ruta de empresas, con prefijo vacío, la capturaba antes.
+- Los listados paginados no tenían un orden fijo (`UnorderedObjectListWarning`), por lo que una página podía repetir u omitir registros.
+- `run_monthly` y los reportes fallaban con error 500 ante parámetros inválidos; ahora responden 400.
+- El contenedor `beat` de docker-compose usaba `django_celery_beat`, que no está instalado.
+- El job de lint del CI fallaba (líneas largas, imports sin usar y orden de imports).
 
 ---
 

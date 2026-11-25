@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["main", "develop", "copilot/**"]
+    branches: ["main", "develop", "mejoras/**"]
   pull_request:
     branches: ["main", "develop"]
 
@@ -28,19 +28,26 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Run Django system check
         env:
-          DJANGO_SETTINGS_MODULE: zelani.test_settings
+          DJANGO_SETTINGS_MODULE: sgg.test_settings
           SECRET_KEY: ci-test-secret-key
         run: python manage.py check
 
-      - name: Run tests
+      - name: Check for missing migrations
         env:
-          DJANGO_SETTINGS_MODULE: zelani.test_settings
+          DJANGO_SETTINGS_MODULE: sgg.test_settings
           SECRET_KEY: ci-test-secret-key
-        run: python manage.py test tests/ --verbosity=2
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Run tests with coverage
+        env:
+          SECRET_KEY: ci-test-secret-key
+        run: |
+          coverage run -m pytest
+          coverage report --skip-covered
 
   lint:
     name: Lint

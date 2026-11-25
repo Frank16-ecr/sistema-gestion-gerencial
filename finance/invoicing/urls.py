@@ -1,5 +1,6 @@
 from rest_framework.routers import DefaultRouter
-from .views import FeeNoteViewSet, FeeNoteReminderViewSet
+
+from .views import FeeNoteReminderViewSet, FeeNoteViewSet
 
 router = DefaultRouter()
 router.register('fee-notes', FeeNoteViewSet, basename='fee-note')

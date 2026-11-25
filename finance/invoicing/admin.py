@@ -1,10 +1,14 @@
 from django.contrib import admin
+
 from .models import FeeNote, FeeNoteReminder
 
 
 @admin.register(FeeNote)
 class FeeNoteAdmin(admin.ModelAdmin):
-    list_display = ('fee_note_number', 'tenant', 'insurer_name', 'total_amount', 'invoice_currency', 'status', 'due_date', 'created_at')
+    list_display = (
+        'fee_note_number', 'tenant', 'insurer_name', 'total_amount', 'invoice_currency', 'status', 'due_date',
+        'created_at',
+    )
     search_fields = ('fee_note_number', 'insurer_name', 'efris_fiscal_number')
     list_filter = ('status', 'is_void', 'invoice_currency', 'tenant')
     date_hierarchy = 'created_at'

@@ -1,6 +1,5 @@
 import logging
 from decimal import Decimal
-from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +12,9 @@ class PaymentService:
         Calculate FX gain/loss.
         FX gain/loss = (payment exchange rate - fee note issue rate) * foreign amount received
         """
-        if fee_note.invoice_currency == 'UGX':
+        from tenants.config import base_currency
+
+        if fee_note.invoice_currency == base_currency(fee_note.tenant):
             return Decimal('0.00')
         rate_diff = payment.exchange_rate - fee_note.exchange_rate_at_issue
         fx_gain_loss = rate_diff * payment.amount_received_foreign
@@ -26,7 +27,6 @@ class PaymentService:
         updates invoice status, posts journals.
         """
         from finance.payments.models import FeeNotePayment, WHTCredit
-        from finance.accounts.models import JournalEntry, JournalLine
 
         amount_received_foreign = Decimal(str(payload['amount_received_foreign']))
         exchange_rate = Decimal(str(payload.get('exchange_rate', 1)))

@@ -1,5 +1,7 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
+
+from tenants.config import default_currency
 
 
 class ExchangeRate(models.Model):
@@ -9,7 +11,7 @@ class ExchangeRate(models.Model):
     ]
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name='exchange_rates')
     from_currency = models.CharField(max_length=10)
-    to_currency = models.CharField(max_length=10, default="UGX")
+    to_currency = models.CharField(max_length=10, default=default_currency)
     rate = models.DecimalField(max_digits=18, decimal_places=6)
     rate_date = models.DateField()
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="manual")

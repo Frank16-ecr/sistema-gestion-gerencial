@@ -1,8 +1,6 @@
 from rest_framework.routers import DefaultRouter
-from .views import (
-    EmployeePayrollProfileViewSet, EmployeeAllowanceViewSet,
-    PayrollRunViewSet, PayrollLineViewSet,
-)
+
+from .views import EmployeeAllowanceViewSet, EmployeePayrollProfileViewSet, PayrollLineViewSet, PayrollRunViewSet
 
 router = DefaultRouter()
 router.register('employee-profiles', EmployeePayrollProfileViewSet, basename='employee-profile')

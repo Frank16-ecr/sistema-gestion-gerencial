@@ -1,16 +1,17 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from finance.security.permissions import TenantScopedMixin
+
 from .models import FeeNote, FeeNoteReminder
-from .serializers import FeeNoteSerializer, FeeNoteReminderSerializer
+from .serializers import FeeNoteReminderSerializer, FeeNoteSerializer
 from .services import FeeNoteService
 
 
-class FeeNoteViewSet(viewsets.ModelViewSet):
+class FeeNoteViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     queryset = FeeNote.objects.all()
     serializer_class = FeeNoteSerializer
-    permission_classes = [IsAuthenticated]
     filterset_fields = ('tenant', 'status', 'is_void', 'invoice_currency')
     search_fields = ('fee_note_number', 'insurer_name', 'efris_fiscal_number')
 
@@ -34,8 +35,8 @@ class FeeNoteViewSet(viewsets.ModelViewSet):
         return Response({'status': 'sent'})
 
 
-class FeeNoteReminderViewSet(viewsets.ModelViewSet):
-    queryset = FeeNoteReminder.objects.all()
+class FeeNoteReminderViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    tenant_path = 'fee_note__tenant'
+    queryset = FeeNoteReminder.objects.select_related('fee_note')
     serializer_class = FeeNoteReminderSerializer
-    permission_classes = [IsAuthenticated]
     filterset_fields = ('fee_note', 'reminder_type', 'success')

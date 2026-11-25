@@ -1,14 +1,15 @@
 from django.db import models
-from django.conf import settings
 
 
 class StatutoryObligation(models.Model):
     OBLIGATION_TYPES = [
-        ("paye", "PAYE"),
-        ("nssf", "NSSF"),
-        ("vat", "VAT"),
-        ("income_tax", "Provisional Income Tax"),
-        ("wht", "Withholding Tax"),
+        ("paye", "PAYE (retención de renta)"),
+        ("nssf", "NSSF (seguridad social)"),
+        ("vat", "IVA"),
+        ("income_tax", "Impuesto sobre la renta"),
+        ("wht", "Retención en la fuente"),
+        ("social_security", "Seguridad social"),
+        ("other", "Otra obligacion"),
     ]
     STATUS_CHOICES = [
         ("pending", "Pending"),

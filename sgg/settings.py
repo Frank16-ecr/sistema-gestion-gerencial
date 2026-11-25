@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,6 +36,8 @@ INSTALLED_APPS = [
     'finance.security',
     'finance.budgets',
     'finance.investments',
+    # Interfaz web
+    'panel',
 ]
 
 MIDDLEWARE = [
@@ -48,12 +51,12 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'zelani.urls'
+ROOT_URLCONF = 'sgg.urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -66,12 +69,12 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'zelani.wsgi.application'
+WSGI_APPLICATION = 'sgg.wsgi.application'
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='zelani_db'),
+        'NAME': config('DB_NAME', default='sgg_db'),
         'USER': config('DB_USER', default='postgres'),
         'PASSWORD': config('DB_PASSWORD', default='password'),
         'HOST': config('DB_HOST', default='localhost'),
@@ -86,8 +89,12 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'Africa/Kampala'
+# Regionalizacion: ajustala en .env segun el pais de operacion.
+LANGUAGE_CODE = config('LANGUAGE_CODE', default='es')
+TIME_ZONE = config('TIME_ZONE', default='UTC')
+# Moneda por defecto de los registros y moneda base de las empresas que no
+# configuren la suya (TenantSetting 'base_currency').
+DEFAULT_CURRENCY = config('DEFAULT_CURRENCY', default='USD')
 USE_I18N = True
 USE_TZ = True
 
@@ -117,11 +124,16 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Zelani Finance Module API',
-    'DESCRIPTION': 'Comprehensive finance module for insurance brokerage',
+    'TITLE': 'SGG - Sistema de Gestion Gerencial API',
+    'DESCRIPTION': 'API financiera y gerencial multiempresa: contabilidad, facturacion, cobros, gastos, '
+                   'nomina, obligaciones, bancos, divisas, presupuestos, inversiones y reportes.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'panel'
+LOGOUT_REDIRECT_URL = 'login'
 
 CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
