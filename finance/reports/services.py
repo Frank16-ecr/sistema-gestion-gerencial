@@ -137,30 +137,47 @@ class ReportService:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _receivables(tenant):
+    def _receivables(tenant, today=None):
+        """Cuentas por cobrar por moneda: facturas venezolanas (sales) y notas de cobro (invoicing)."""
         from finance.invoicing.models import FeeNote
+        from finance.sales.models import Invoice
 
-        rows = (
+        today = today or date.today()
+        result = {}
+
+        def add(currency, count, due, overdue_count, overdue_due):
+            row = result.setdefault(currency, {
+                'count': 0, 'balance_due': ZERO, 'overdue_count': 0, 'overdue_balance': ZERO,
+            })
+            row['count'] += count
+            row['balance_due'] += _sum(due)
+            row['overdue_count'] += overdue_count
+            row['overdue_balance'] += _sum(overdue_due)
+
+        overdue_sale = Q(due_date__lt=today)
+        sales_rows = (
+            Invoice.objects.filter(tenant=tenant, status__in=('issued', 'partial'), balance_due__gt=0)
+            .exclude(doc_type='credit_note')
+            .values('currency')
+            .annotate(invoices=Count('id'), total_due=Sum('balance_due'),
+                      overdue_invoices=Count('id', filter=overdue_sale),
+                      overdue_due=Sum('balance_due', filter=overdue_sale))
+        )
+        for r in sales_rows:
+            add(r['currency'], r['invoices'], r['total_due'], r['overdue_invoices'], r['overdue_due'])
+
+        overdue_fee = Q(status__startswith='overdue')
+        fee_rows = (
             FeeNote.objects.filter(tenant=tenant, is_void=False)
             .exclude(status__in=('paid', 'void'))
             .values('invoice_currency')
-            .annotate(
-                invoices=Count('id'),
-                total_due=Sum('balance_due'),
-                overdue_invoices=Count('id', filter=Q(status__startswith='overdue')),
-                overdue_due=Sum('balance_due', filter=Q(status__startswith='overdue')),
-            )
-            .order_by('invoice_currency')
+            .annotate(invoices=Count('id'), total_due=Sum('balance_due'),
+                      overdue_invoices=Count('id', filter=overdue_fee),
+                      overdue_due=Sum('balance_due', filter=overdue_fee))
         )
-        return {
-            r['invoice_currency']: {
-                'count': r['invoices'],
-                'balance_due': _sum(r['total_due']),
-                'overdue_count': r['overdue_invoices'],
-                'overdue_balance': _sum(r['overdue_due']),
-            }
-            for r in rows
-        }
+        for r in fee_rows:
+            add(r['invoice_currency'], r['invoices'], r['total_due'], r['overdue_invoices'], r['overdue_due'])
+        return dict(sorted(result.items()))
 
     @staticmethod
     def _expenses(tenant, start_date, end_date):
@@ -288,7 +305,7 @@ class ReportService:
             'period_end': str(end_date),
             'income_statement': ReportService.get_income_statement(tenant, start_date, end_date),
             'cash': ReportService._cash(tenant),
-            'receivables': ReportService._receivables(tenant),
+            'receivables': ReportService._receivables(tenant, today),
             'expenses': ReportService._expenses(tenant, start_date, end_date),
             'budgets': ReportService._budgets(tenant, start_date, end_date),
             'investments': portfolio_by_currency(Investment.objects.filter(tenant=tenant, status='active')),

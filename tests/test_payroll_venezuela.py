@@ -148,3 +148,26 @@ class ConfigurarPaisCommandTests(TestCase):
             call_command('configurar_pais', 'no-existe', 'VE', stdout=StringIO())
         with self.assertRaises(CommandError):
             call_command('configurar_pais', 'andina', 'UG', '--riesgo', 'bajo', stdout=StringIO())
+
+
+class CargarDemoTests(TestCase):
+
+    def test_creates_demo_and_reset_recreates_it(self):
+        from finance.accounts.models import JournalEntry
+        from finance.reports.services import ReportService
+        from finance.sales.models import Invoice
+
+        User.objects.create_user('frank', password='x')
+        call_command('cargar_demo', '--usuario', 'frank', stdout=StringIO())
+        with self.assertRaises(CommandError):
+            call_command('cargar_demo', stdout=StringIO())
+        call_command('cargar_demo', '--reset', stdout=StringIO())
+        tenant = Tenant.objects.get(slug='demo')
+        self.assertEqual(Tenant.objects.filter(slug='demo').count(), 1)
+        self.assertTrue(Invoice.objects.filter(tenant=tenant, status='paid').exists())
+        self.assertTrue(JournalEntry.objects.filter(tenant=tenant).exists())
+        today = date.today()
+        self.assertTrue(ReportService.get_balance_sheet(tenant, today)['is_balanced'])
+        data = ReportService.get_management_dashboard(tenant, date(today.year, 1, 1), today)
+        self.assertIn('USD', data['receivables'])
+        self.assertTrue(data['alerts'])
