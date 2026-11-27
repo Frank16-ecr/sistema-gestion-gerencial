@@ -1,5 +1,6 @@
 import logging
-from datetime import date, timedelta
+from datetime import date
+
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -10,10 +11,10 @@ class FeeNoteService:
     @staticmethod
     def generate_from_claim(claim_data, tenant, user):
         """Creates a FeeNote from claim data, posts journal entries, queues EFRIS submission."""
-        from finance.invoicing.models import FeeNote
-        from finance.accounts.models import JournalEntry, JournalLine, Account
-
         from decimal import Decimal
+
+        from finance.invoicing.models import FeeNote
+        from tenants.config import base_currency
         fee_note_number = claim_data.get('fee_note_number', f"FN-{timezone.now().strftime('%Y%m%d%H%M%S')}")
         invoice_amount = Decimal(str(claim_data.get('invoice_amount', 0)))
         vat_amount = Decimal(str(claim_data.get('vat_amount', 0)))
@@ -28,7 +29,7 @@ class FeeNoteService:
             insurer_id=claim_data['insurer_id'],
             insurer_name=claim_data.get('insurer_name', ''),
             insurer_email=claim_data.get('insurer_email', ''),
-            invoice_currency=claim_data.get('invoice_currency', 'UGX'),
+            invoice_currency=claim_data.get('invoice_currency') or base_currency(tenant),
             invoice_amount=invoice_amount,
             vat_amount=vat_amount,
             total_amount=total_amount,
@@ -45,7 +46,7 @@ class FeeNoteService:
 
         # Queue EFRIS submission as a background task
         try:
-            from zelani.celery import app as celery_app
+            from sgg.celery import app as celery_app
             celery_app.send_task('finance.invoicing.tasks.submit_fee_note_to_efris', args=[fee_note.pk])
         except Exception as e:
             logger.warning("Could not queue EFRIS submission: %s", e)

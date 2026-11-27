@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.db import models
 
+from tenants.config import default_currency
+
 
 class Budget(models.Model):
     STATUS_CHOICES = [
@@ -13,7 +15,7 @@ class Budget(models.Model):
     fiscal_year = models.PositiveIntegerField()
     period_start = models.DateField()
     period_end = models.DateField()
-    currency = models.CharField(max_length=10, default="USD")
+    currency = models.CharField(max_length=10, default=default_currency)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,

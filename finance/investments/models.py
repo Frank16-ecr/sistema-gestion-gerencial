@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.db import models
 
+from tenants.config import default_currency
+
 
 class Investment(models.Model):
     TYPE_CHOICES = [
@@ -20,7 +22,7 @@ class Investment(models.Model):
     name = models.CharField(max_length=255)
     asset_type = models.CharField(max_length=30, choices=TYPE_CHOICES, default="other")
     institution = models.CharField(max_length=255, blank=True)
-    currency = models.CharField(max_length=10, default="USD")
+    currency = models.CharField(max_length=10, default=default_currency)
     initial_amount = models.DecimalField(max_digits=18, decimal_places=2)
     start_date = models.DateField()
     maturity_date = models.DateField(null=True, blank=True)

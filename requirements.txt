@@ -11,8 +11,9 @@ psycopg2-binary>=2.9,<3.0
 gunicorn>=21.2,<22.0
 
 # Async and messaging
-celery>=5.3,<6.0
-redis>=5.0,<6.0
+# celery[redis] instala la version de redis-py compatible con su kombu
+# (kombu 5.7 exige redis-py >= 6.1; fijarla aparte provoca VersionMismatch).
+celery[redis]>=5.3,<6.0
 
 # Reporting and document-generation utilities
 Pillow>=10.0,<12.0

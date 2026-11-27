@@ -1,10 +1,13 @@
 from django.contrib import admin
-from .models import BankAccount, BankReconciliation, PettyCashTransaction, Cheque
+
+from .models import BankAccount, BankReconciliation, Cheque, PettyCashTransaction
 
 
 @admin.register(BankAccount)
 class BankAccountAdmin(admin.ModelAdmin):
-    list_display = ('account_name', 'bank_name', 'account_number', 'currency', 'account_type', 'current_balance', 'is_active')
+    list_display = (
+        'account_name', 'bank_name', 'account_number', 'currency', 'account_type', 'current_balance', 'is_active',
+    )
     search_fields = ('account_name', 'bank_name', 'account_number')
     list_filter = ('account_type', 'currency', 'is_active', 'tenant')
 

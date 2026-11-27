@@ -2,8 +2,9 @@
 import uuid
 from datetime import date
 from decimal import Decimal
-from django.test import TestCase
+
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 
 User = get_user_model()
 
@@ -33,8 +34,8 @@ class FeeNoteServiceTest(TestCase):
         self.assertEqual(fee_note.invoice_amount, Decimal('500000'))
 
     def test_void_fee_note(self):
-        from finance.invoicing.services import FeeNoteService
         from finance.invoicing.models import FeeNote
+        from finance.invoicing.services import FeeNoteService
         fn = FeeNote.objects.create(
             tenant=self.tenant,
             claim_id=uuid.uuid4(),
@@ -52,8 +53,8 @@ class FeeNoteServiceTest(TestCase):
         self.assertEqual(fn.status, 'void')
 
     def test_update_overdue_statuses(self):
-        from finance.invoicing.services import FeeNoteService
         from finance.invoicing.models import FeeNote
+        from finance.invoicing.services import FeeNoteService
         fn = FeeNote.objects.create(
             tenant=self.tenant,
             claim_id=uuid.uuid4(),
@@ -85,12 +86,14 @@ class PayrollServiceTest(TestCase):
 
     def test_calculate_paye_first_band(self):
         from finance.payroll.services import PayrollService
+
         # 300,000 - 235,000 = 65,000 * 10% = 6,500
         paye = PayrollService.calculate_paye(Decimal('300000'))
         self.assertEqual(paye, Decimal('6500.00'))
 
     def test_calculate_paye_third_band(self):
         from finance.payroll.services import PayrollService
+
         # Taxable: 2,000,000
         paye = PayrollService.calculate_paye(Decimal('2000000'))
         # (335000-235000)*10% + (410000-335000)*20% + (2000000-410000)*30%
@@ -104,14 +107,14 @@ class PayrollServiceTest(TestCase):
         self.assertEqual(employer, Decimal('200000.00'))
 
     def test_run_monthly_payroll(self):
+        from finance.payroll.models import EmployeePayrollProfile
         from finance.payroll.services import PayrollService
-        from finance.payroll.models import EmployeePayrollProfile, PayrollRun
-        employee = EmployeePayrollProfile.objects.create(
+        EmployeePayrollProfile.objects.create(
             tenant=self.tenant,
             user=self.user,
             employee_number="EMP001",
             gross_salary=Decimal('2000000'),
-            start_date=date.today(),
+            start_date=date(2025, 1, 1),  # debe haber ingresado antes del periodo
         )
         payroll_run = PayrollService.run_monthly_payroll(self.tenant, 6, 2025, self.user)
         self.assertIsNotNone(payroll_run)
@@ -122,9 +125,12 @@ class PayrollServiceTest(TestCase):
 class PaymentServiceTest(TestCase):
     def setUp(self):
         import uuid
-        from tenants.models import Tenant
+
         from finance.invoicing.models import FeeNote
+        from tenants.models import Tenant, TenantSetting
         self.tenant = Tenant.objects.create(name="Pay Svc Tenant", slug="pay-svc-tenant")
+        # Empresa ugandesa: contabiliza en UGX y factura en USD.
+        TenantSetting.objects.create(tenant=self.tenant, setting_key='base_currency', setting_value='UGX')
         self.user = User.objects.create_user(username="paysvcuser", password="pass")
         self.fee_note = FeeNote.objects.create(
             tenant=self.tenant,
@@ -157,8 +163,8 @@ class PaymentServiceTest(TestCase):
         self.assertEqual(self.fee_note.status, 'paid')
 
     def test_calculate_fx_gain_loss(self):
-        from finance.payments.services import PaymentService
         from finance.payments.models import FeeNotePayment
+        from finance.payments.services import PaymentService
         payment = FeeNotePayment(
             fee_note=self.fee_note,
             payment_currency='USD',

@@ -10,7 +10,9 @@ class InvestmentMovementInline(admin.TabularInline):
 
 @admin.register(Investment)
 class InvestmentAdmin(admin.ModelAdmin):
-    list_display = ('name', 'asset_type', 'tenant', 'currency', 'initial_amount', 'status', 'start_date', 'maturity_date')
+    list_display = (
+        'name', 'asset_type', 'tenant', 'currency', 'initial_amount', 'status', 'start_date', 'maturity_date',
+    )
     list_filter = ('asset_type', 'status', 'currency', 'tenant')
     search_fields = ('name', 'institution', 'notes')
     inlines = [InvestmentMovementInline]

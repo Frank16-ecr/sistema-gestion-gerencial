@@ -1,27 +1,26 @@
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
-from .models import Expense, ReimbursementRequest, ReimbursementBatch
-from .serializers import ExpenseSerializer, ReimbursementRequestSerializer, ReimbursementBatchSerializer
+
+from finance.security.permissions import TenantScopedMixin
+
+from .models import Expense, ReimbursementBatch, ReimbursementRequest
+from .serializers import ExpenseSerializer, ReimbursementBatchSerializer, ReimbursementRequestSerializer
 
 
-class ExpenseViewSet(viewsets.ModelViewSet):
+class ExpenseViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     queryset = Expense.objects.all()
     serializer_class = ExpenseSerializer
-    permission_classes = [IsAuthenticated]
     filterset_fields = ('tenant', 'category', 'status', 'currency')
     search_fields = ('description', 'notes')
 
 
-class ReimbursementBatchViewSet(viewsets.ModelViewSet):
+class ReimbursementBatchViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     queryset = ReimbursementBatch.objects.all()
     serializer_class = ReimbursementBatchSerializer
-    permission_classes = [IsAuthenticated]
     filterset_fields = ('tenant', 'status')
 
 
-class ReimbursementRequestViewSet(viewsets.ModelViewSet):
+class ReimbursementRequestViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     queryset = ReimbursementRequest.objects.all()
     serializer_class = ReimbursementRequestSerializer
-    permission_classes = [IsAuthenticated]
     filterset_fields = ('tenant', 'status', 'batch')
     search_fields = ('description',)

@@ -1,19 +1,25 @@
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
+
+from finance.security.permissions import ADMIN_ROLES, TenantScopedMixin
+
 from .models import Tenant, TenantSetting
 from .serializers import TenantSerializer, TenantSettingSerializer
 
 
-class TenantViewSet(viewsets.ModelViewSet):
+class TenantViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    """Cada usuario ve solo sus empresas. Crear empresas es tarea de superusuarios;
+    editarlas, de los administradores de cada una."""
+
+    tenant_path = 'pk'
+    write_roles = ADMIN_ROLES
     queryset = Tenant.objects.all()
     serializer_class = TenantSerializer
-    permission_classes = [IsAuthenticated]
     search_fields = ('name', 'slug')
     filterset_fields = ('is_active',)
 
 
-class TenantSettingViewSet(viewsets.ModelViewSet):
-    queryset = TenantSetting.objects.all()
+class TenantSettingViewSet(TenantScopedMixin, viewsets.ModelViewSet):
+    write_roles = ADMIN_ROLES
+    queryset = TenantSetting.objects.select_related('tenant')
     serializer_class = TenantSettingSerializer
-    permission_classes = [IsAuthenticated]
     filterset_fields = ('tenant',)

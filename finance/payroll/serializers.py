@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import EmployeePayrollProfile, EmployeeAllowance, PayrollRun, PayrollLine
+
+from .models import EmployeeAllowance, EmployeePayrollProfile, PayrollLine, PayrollRun
 
 
 class EmployeeAllowanceSerializer(serializers.ModelSerializer):
@@ -28,3 +29,9 @@ class PayrollRunSerializer(serializers.ModelSerializer):
     class Meta:
         model = PayrollRun
         fields = '__all__'
+        # Estado y totales solo cambian con las acciones run_monthly y approve.
+        read_only_fields = (
+            'status', 'period_start', 'period_end', 'mondays', 'total_gross', 'total_paye', 'total_nssf_employee',
+            'total_nssf_employer', 'total_net', 'contributions_summary', 'approved_by', 'approved_at',
+            'created_by', 'journal_entry', 'created_at',
+        )

@@ -9,8 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Initial implementation of the Zelani Finance Module
+### Cambiado
+- El proyecto pasa a llamarse **SGG · Sistema de Gestión Gerencial**: el paquete `zelani` ahora es `sgg`, junto con la base de datos por defecto (`sgg_db`), el usuario de Docker, Celery, el CI y la documentación. El README está en español y sus badges apuntan a `Frank16-ecr/sistema-gestion-gerencial`.
+- Idioma por defecto en español; `LANGUAGE_CODE`, `TIME_ZONE` y `DEFAULT_CURRENCY` se configuran por variables de entorno.
+- Las monedas por defecto de los modelos salen de `DEFAULT_CURRENCY`, y la moneda base puede definirse por empresa (`TenantSetting` con clave `base_currency`).
+- La nómina admite tramos de impuesto, seguridad social (con tope), códigos de obligación y día de vencimiento configurables por empresa (`payroll_config`). Por defecto se mantienen las reglas de Uganda.
+- Las categorías de gasto y los tipos de obligación tienen etiquetas en español.
+- La lógica de ejecución presupuestaria y de portafolio de inversiones se movió a `services.py` para poder reutilizarla.
+
+### Añadido
+- **Tasa BCV automática**: lectura de la portada del BCV (USD, EUR, CNY, TRY y RUB, con su fecha valor), tarea de Celery Beat de lunes a viernes a las 6:15 pm con reintentos, comando `actualizar_tasa_bcv` (también desde un archivo) y `get_rate()` para buscar la tasa vigente en una fecha.
+- **Facturación venezolana** (`finance.sales`): datos fiscales del emisor, clientes con RIF validado, facturas y notas de crédito y débito con número de factura y número de control consecutivos, IVA general, reducido y de lujo y exentos, equivalente en Bs a tasa BCV, cobros multimoneda con IGTF del 3 % y diferencial cambiario, retenciones de IVA del 75 % o 100 %, anulación sin borrado, libro de ventas en JSON o CSV y obligaciones mensuales de IVA e IGTF.
+- **Asientos contables automáticos** (`finance.accounts.services`) por roles contables configurables, reverso de asientos y plan de cuentas venezolano básico (`crear_plan_cuentas`; `configurar_pais VE` también lo crea).
+- **Nómina quincenal** (`period` igual a `q1` o `q2`) con IVSS y RPE cotizados por lunes del periodo, obligaciones mensuales que suman las quincenas y aprobación con asiento contable (`runs/{id}/approve/`).
+- El panel muestra la última tasa BCV registrada.
+- **Venezuela como país por defecto** (zona horaria `America/Caracas`, moneda `VES`, `PAYROLL_COUNTRY=VE`):
+  - ISLR retenido con el porcentaje AR-I de cada trabajador (campo `income_tax_rate`).
+  - Aportes IVSS, RPE, FAOV, INCES y Protección de Pensiones, con base, topes en salarios mínimos, piso y vencimiento configurables, y una obligación por aporte.
+  - Detalle de aportes por línea de nómina (`contributions`) y por nómina (`contributions_summary`).
+  - Comando `configurar_pais` para configurar una empresa (riesgo del IVSS, salario mínimo, piso de pensiones, moneda).
+  - Tipos de obligación venezolanos: ISLR, IVSS, RPE, FAOV, INCES, pensiones, IVA e IGTF.
+- El motor de nómina admite varios aportes por empresa y dos métodos de impuesto (`bands` y `employee_rate`). Uganda sigue disponible como preset `UG`.
+- Reportes nuevos: **balance general** (`balance-sheet/`) y **resumen gerencial** (`dashboard/`) con alertas.
+- **Panel web** en `/panel/` con inicio de sesión, selección de empresa y periodo, modo claro y oscuro y diseño adaptable a móvil.
+- Configuración de pytest (`pytest-django`) y de cobertura; nuevos objetivos `make pytest`, `make coverage` e `install-dev`.
+- El CI comprueba que no falten migraciones y mide la cobertura.
+- 89 pruebas nuevas (133 en total): aislamiento entre empresas, reportes, nómina configurable y panel.
+
+### Corregido
+- **Seguridad**: los módulos originales (contabilidad, facturación, pagos, gastos, nómina, obligaciones, bancos, divisas, auditoría, empresas y reportes) solo exigían inicio de sesión, así que cualquier usuario podía leer y modificar datos de todas las empresas. Ahora todos filtran por empresa y por rol. Los salarios y la bitácora quedan restringidos a administración, gerencia y auditoría.
+- `/api/tenants/settings/` era inalcanzable: la ruta de empresas, con prefijo vacío, la capturaba antes.
+- Los listados paginados no tenían un orden fijo (`UnorderedObjectListWarning`), por lo que una página podía repetir u omitir registros.
+- `run_monthly` y los reportes fallaban con error 500 ante parámetros inválidos; ahora responden 400.
+- El contenedor `beat` de docker-compose usaba `django_celery_beat`, que no está instalado.
+- La API permitía cambiar el estado y los totales de una nómina directamente, saltándose la aprobación. Ahora son de solo lectura.
+- La nómina incluía a trabajadores que aún no habían ingresado o que ya habían egresado en el periodo.
+- El job de lint del CI fallaba (líneas largas, imports sin usar y orden de imports).
 
 ---
 

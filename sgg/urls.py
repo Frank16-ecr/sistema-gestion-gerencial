@@ -1,8 +1,16 @@
 from django.contrib import admin
-from django.urls import path, include
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from django.urls import include, path
+from django.views.generic import RedirectView
+
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+
+admin.site.site_header = 'SGG - Sistema de Gestion Gerencial'
+admin.site.site_title = 'SGG'
+admin.site.index_title = 'Administracion'
 
 urlpatterns = [
+    path('', RedirectView.as_view(pattern_name='panel', permanent=False)),
+    path('panel/', include('panel.urls')),
     path('admin/', admin.site.urls),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
@@ -21,4 +29,5 @@ urlpatterns = [
     path('api/finance/security/', include('finance.security.urls')),
     path('api/finance/budgets/', include('finance.budgets.urls')),
     path('api/finance/investments/', include('finance.investments.urls')),
+    path('api/finance/sales/', include('finance.sales.urls')),
 ]

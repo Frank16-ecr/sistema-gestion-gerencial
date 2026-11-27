@@ -1,17 +1,19 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
+
+from tenants.config import default_currency
 
 
 class Expense(models.Model):
     CATEGORY_CHOICES = [
-        ("rent", "Rent"),
+        ("rent", "Alquiler"),
         ("internet", "Internet"),
-        ("fuel", "Fuel"),
-        ("audit_fees", "Audit Fees"),
-        ("utilities", "Utilities"),
-        ("office_supplies", "Office Supplies"),
-        ("travel", "Travel"),
-        ("other", "Other"),
+        ("fuel", "Combustible"),
+        ("audit_fees", "Honorarios de auditoría"),
+        ("utilities", "Servicios básicos"),
+        ("office_supplies", "Material de oficina"),
+        ("travel", "Viajes"),
+        ("other", "Otros"),
     ]
     STATUS_CHOICES = [
         ("pending", "Pending"),
@@ -23,13 +25,17 @@ class Expense(models.Model):
     description = models.CharField(max_length=255)
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
     amount = models.DecimalField(max_digits=18, decimal_places=2)
-    currency = models.CharField(max_length=10, default="UGX")
+    currency = models.CharField(max_length=10, default=default_currency)
     expense_date = models.DateField()
     claim_id = models.UUIDField(null=True, blank=True)
     receipt_file = models.FileField(upload_to="finance/expenses/", null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
-    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='submitted_expenses')
-    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_expenses')
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='submitted_expenses',
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_expenses',
+    )
     approved_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -68,15 +74,22 @@ class ReimbursementRequest(models.Model):
     ]
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name='reimbursement_requests')
     claim_id = models.UUIDField()
-    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='reimbursement_requests')
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='reimbursement_requests',
+    )
     description = models.CharField(max_length=255)
     amount = models.DecimalField(max_digits=18, decimal_places=2)
-    currency = models.CharField(max_length=10, default="UGX")
+    currency = models.CharField(max_length=10, default=default_currency)
     receipt_file = models.FileField(upload_to="finance/reimbursements/", null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
-    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_reimbursements')
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='approved_reimbursements',
+    )
     approved_at = models.DateTimeField(null=True, blank=True)
-    batch = models.ForeignKey(ReimbursementBatch, null=True, blank=True, on_delete=models.SET_NULL, related_name='items')
+    batch = models.ForeignKey(
+        ReimbursementBatch, null=True, blank=True, on_delete=models.SET_NULL, related_name='items',
+    )
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -1,5 +1,7 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
+
+from tenants.config import default_currency
 
 
 class BankAccount(models.Model):
@@ -12,7 +14,7 @@ class BankAccount(models.Model):
     account_name = models.CharField(max_length=255)
     bank_name = models.CharField(max_length=255)
     account_number = models.CharField(max_length=50)
-    currency = models.CharField(max_length=10, default="UGX")
+    currency = models.CharField(max_length=10, default=default_currency)
     account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPES, default="current")
     opening_balance = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     current_balance = models.DecimalField(max_digits=18, decimal_places=2, default=0)
@@ -85,7 +87,9 @@ class Cheque(models.Model):
     issue_date = models.DateField()
     cleared_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
-    fee_note = models.ForeignKey("finance_invoicing.FeeNote", null=True, blank=True, on_delete=models.SET_NULL, related_name='cheques')
+    fee_note = models.ForeignKey(
+        "finance_invoicing.FeeNote", null=True, blank=True, on_delete=models.SET_NULL, related_name='cheques',
+    )
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

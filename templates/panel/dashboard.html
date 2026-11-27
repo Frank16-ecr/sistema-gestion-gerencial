@@ -1,0 +1,119 @@
+{% extends "panel/base.html" %}
+{% load l10n %}
+{% block title %}Panel{% endblock %}
+{% block content %}
+{% if not tenants %}
+  <div class="card">
+    <h1>Sin empresas asignadas</h1>
+    <p class="muted">Tu usuario todavía no tiene un rol en ninguna empresa. Pide a un administrador que te asigne uno.</p>
+  </div>
+{% else %}
+<h1>{{ tenant.name }}</h1>
+<p class="muted">Resumen del {{ start_date|date:"d/m/Y" }} al {{ end_date|date:"d/m/Y" }} · Moneda base: {{ data.base_currency }}
+  {% for cur, r in data.exchange_rates.items %}{% if cur == "USD" or cur == "EUR" %} · <strong>{{ cur }}</strong> {{ r.rate|floatformat:"4g" }} {{ data.base_currency }}{% if r.source == "bcv" %} (BCV{% else %} ({{ r.source }}{% endif %}, {{ r.date|date:"d/m/Y" }}){% endif %}{% endfor %}</p>
+
+<form class="filters card" method="get">
+  <label>Empresa
+    <select name="tenant">
+      {% for t in tenants %}<option value="{{ t.pk }}" {% if t.pk == tenant.pk %}selected{% endif %}>{{ t.name }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Desde <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}"></label>
+  <label>Hasta <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}"></label>
+  <button type="submit">Actualizar</button>
+</form>
+{% for e in errors %}<div class="alert danger" style="margin-top:12px">{{ e }}</div>{% endfor %}
+
+{% with s=data.income_statement %}
+<div class="kpis">
+  <div class="card kpi"><div class="label">Ingresos contabilizados</div><div class="value">{{ s.total_income|floatformat:"2g" }}</div></div>
+  <div class="card kpi"><div class="label">Gastos contabilizados</div><div class="value">{{ s.total_expenses|floatformat:"2g" }}</div></div>
+  <div class="card kpi"><div class="label">Resultado neto</div>
+    <div class="value {% if s.net_profit < 0 %}neg{% else %}pos{% endif %}">{{ s.net_profit|floatformat:"2g" }}</div></div>
+  <div class="card kpi"><div class="label">Obligaciones abiertas</div>
+    <div class="value">{{ data.obligations.open_count }}</div>
+    <div class="label">{{ data.obligations.open_amount|floatformat:"2g" }} por pagar</div></div>
+</div>
+{% endwith %}
+<p class="muted" style="margin-top:-6px;font-size:13px">Ingresos, gastos y resultado salen de los asientos contables (facturas, cobros y nómina), en moneda base. Los gastos del módulo de gastos se muestran aparte, más abajo.</p>
+
+{% if data.alerts %}
+<section class="card" style="margin-bottom:16px">
+  <h2>Alertas</h2>
+  {% for a in data.alerts %}<div class="alert {{ a.level }}">{{ a.message }}</div>{% endfor %}
+</section>
+{% endif %}
+
+<div class="grid">
+  <section class="card">
+    <h2>Caja y bancos</h2>
+    {% if data.cash %}
+    <div class="scroll"><table><tr><th>Moneda</th><th class="num">Cuentas</th><th class="num">Saldo</th></tr>
+      {% for cur, row in data.cash.items %}<tr><td>{{ cur }}</td><td class="num">{{ row.accounts }}</td><td class="num">{{ row.balance|floatformat:"2g" }}</td></tr>{% endfor %}
+    </table></div>
+    {% else %}<p class="empty">No hay cuentas bancarias activas.</p>{% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Cuentas por cobrar</h2>
+    {% if data.receivables %}
+    <div class="scroll"><table><tr><th>Moneda</th><th class="num">Facturas</th><th class="num">Saldo</th><th class="num">Vencido</th></tr>
+      {% for cur, row in data.receivables.items %}<tr><td>{{ cur }}</td><td class="num">{{ row.count }}</td>
+        <td class="num">{{ row.balance_due|floatformat:"2g" }}</td>
+        <td class="num {% if row.overdue_balance %}neg{% endif %}">{{ row.overdue_balance|floatformat:"2g" }}</td></tr>{% endfor %}
+    </table></div>
+    {% else %}<p class="empty">No hay facturas pendientes de cobro.</p>{% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Inversiones activas</h2>
+    {% if data.investments %}
+    <div class="scroll"><table><tr><th>Moneda</th><th class="num">Inv.</th><th class="num">Capital</th><th class="num">Saldo actual</th></tr>
+      {% for cur, row in data.investments.items %}<tr><td>{{ cur }}</td><td class="num">{{ row.investments }}</td>
+        <td class="num">{{ row.invested_capital|floatformat:"2g" }}</td><td class="num">{{ row.current_balance|floatformat:"2g" }}</td></tr>{% endfor %}
+    </table></div>
+    {% else %}<p class="empty">No hay inversiones activas.</p>{% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Gastos aprobados del periodo</h2>
+    {% if data.expenses.by_currency %}
+      {% for cur, row in data.expenses.by_currency.items %}
+      <div class="scroll"><table><tr><th>Categoría</th><th class="num">{{ cur }}</th></tr>
+        {% for cat, total in row.by_category.items %}<tr><td>{{ cat }}</td><td class="num">{{ total|floatformat:"2g" }}</td></tr>{% endfor %}
+        <tr><td><strong>Total</strong></td><td class="num"><strong>{{ row.total|floatformat:"2g" }}</strong></td></tr>
+      </table></div>
+      {% endfor %}
+    {% else %}<p class="empty">No hay gastos aprobados en el periodo.</p>{% endif %}
+    {% if data.expenses.pending_approval %}<p class="muted">{{ data.expenses.pending_approval }} pendiente(s) de aprobación.</p>{% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Próximas obligaciones (15 días)</h2>
+    {% if data.obligations.upcoming %}
+    <div class="scroll"><table><tr><th>Tipo</th><th>Vence</th><th class="num">Monto</th></tr>
+      {% for o in data.obligations.upcoming %}<tr><td>{{ o.label }}</td><td>{{ o.due_date|date:"d/m/Y" }}</td><td class="num">{{ o.amount_due|floatformat:"2g" }}</td></tr>{% endfor %}
+    </table></div>
+    {% else %}<p class="empty">Nada vence en los próximos 15 días.</p>{% endif %}
+    {% if data.obligations.overdue_count %}<p class="neg">{{ data.obligations.overdue_count }} vencida(s): {{ data.obligations.overdue_amount|floatformat:"2g" }}</p>{% endif %}
+  </section>
+</div>
+
+<section class="card" style="margin-top:16px">
+  <h2>Ejecución presupuestaria</h2>
+  {% for b in data.budgets %}
+    <h3 style="font-size:15px;margin:12px 0 4px">{{ b.name }} <span class="muted">({{ b.currency }})</span></h3>
+    <div class="muted" style="font-size:13px">{{ b.total_spent|floatformat:"2g" }} de {{ b.total_planned|floatformat:"2g" }}{% if b.percent_used is not None %} · {{ b.percent_used }}%{% endif %}</div>
+    <div class="bar {% if b.bar_width >= 100 %}danger{% elif b.bar_width >= 90 %}warn{% endif %}"><span style="width:{{ b.bar_width|unlocalize }}%"></span></div>
+    <div class="scroll"><table style="margin-top:8px">
+      <tr><th>Categoría</th><th class="num">Planificado</th><th class="num">Gastado</th><th class="num">Disponible</th><th style="width:30%">Uso</th></tr>
+      {% for l in b.lines %}<tr><td>{{ l.label }}</td><td class="num">{{ l.planned|floatformat:"2g" }}</td><td class="num">{{ l.spent|floatformat:"2g" }}</td>
+        <td class="num {% if l.over_budget %}neg{% endif %}">{{ l.remaining|floatformat:"2g" }}</td>
+        <td><div class="bar {% if l.over_budget %}danger{% elif l.bar_width >= 90 %}warn{% endif %}"><span style="width:{{ l.bar_width|unlocalize }}%"></span></div></td></tr>{% endfor %}
+    </table></div>
+  {% empty %}
+    <p class="empty">No hay presupuestos aprobados que cubran el periodo.</p>
+  {% endfor %}
+</section>
+{% endif %}
+{% endblock %}

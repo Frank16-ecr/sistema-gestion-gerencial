@@ -1,5 +1,7 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
+
+from tenants.config import default_currency
 
 
 class FeeNote(models.Model):
@@ -21,7 +23,7 @@ class FeeNote(models.Model):
     insurer_id = models.UUIDField()
     insurer_name = models.CharField(max_length=255, blank=True)
     insurer_email = models.EmailField(blank=True)
-    invoice_currency = models.CharField(max_length=10, default="UGX")
+    invoice_currency = models.CharField(max_length=10, default=default_currency)
     invoice_amount = models.DecimalField(max_digits=18, decimal_places=2)
     vat_amount = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     total_amount = models.DecimalField(max_digits=18, decimal_places=2)
@@ -37,9 +39,13 @@ class FeeNote(models.Model):
     sent_at = models.DateTimeField(null=True, blank=True)
     is_void = models.BooleanField(default=False)
     void_reason = models.TextField(blank=True)
-    voided_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='voided_fee_notes')
+    voided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='voided_fee_notes',
+    )
     voided_at = models.DateTimeField(null=True, blank=True)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='created_fee_notes')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='created_fee_notes',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -1,12 +1,13 @@
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
+
+from finance.security.permissions import TenantScopedMixin
+
 from .models import ExchangeRate
 from .serializers import ExchangeRateSerializer
 
 
-class ExchangeRateViewSet(viewsets.ModelViewSet):
+class ExchangeRateViewSet(TenantScopedMixin, viewsets.ModelViewSet):
     queryset = ExchangeRate.objects.all()
     serializer_class = ExchangeRateSerializer
-    permission_classes = [IsAuthenticated]
     filterset_fields = ('tenant', 'from_currency', 'to_currency', 'source')
     search_fields = ('from_currency', 'to_currency')

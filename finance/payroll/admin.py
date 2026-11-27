@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import EmployeePayrollProfile, EmployeeAllowance, PayrollRun, PayrollLine
+
+from .models import EmployeeAllowance, EmployeePayrollProfile, PayrollLine, PayrollRun
 
 
 @admin.register(EmployeePayrollProfile)

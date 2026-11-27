@@ -1,4 +1,4 @@
-# Contributing to Zelani Finance Module
+# Contributing to SGG - Sistema de Gestión Gerencial
 
 Thank you for taking the time to contribute! The following guidelines help us keep the project consistent and easy to collaborate on.
 
@@ -122,7 +122,7 @@ Tests use an in-memory SQLite database — no PostgreSQL or Redis required.
 ```bash
 make test
 # or directly:
-python manage.py test tests/ --settings=zelani.test_settings
+python manage.py test tests/ --settings=sgg.test_settings
 ```
 
 ---

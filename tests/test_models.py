@@ -1,6 +1,6 @@
-"""Basic model creation tests for the Zelani Finance Module."""
-from django.test import TestCase
+"""Basic model creation tests del Sistema de Gestion Gerencial."""
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 
 User = get_user_model()
 
@@ -43,8 +43,9 @@ class AccountModelTest(TestCase):
         self.assertEqual(str(account), "1001 - Cash")
 
     def test_journal_entry_creation(self):
-        from finance.accounts.models import Account, JournalEntry, JournalLine
         from datetime import date
+
+        from finance.accounts.models import Account, JournalEntry, JournalLine
         user = User.objects.create_user(username="testuser", password="pass")
         account = Account.objects.create(
             tenant=self.tenant, code="1001", name="Cash", category="asset"
@@ -76,6 +77,7 @@ class AccountModelTest(TestCase):
 class FeeNoteModelTest(TestCase):
     def setUp(self):
         import uuid
+
         from tenants.models import Tenant
         self.tenant = Tenant.objects.create(name="Invoice Tenant", slug="invoice-tenant")
         self.user = User.objects.create_user(username="invoiceuser", password="pass")
@@ -104,8 +106,9 @@ class FeeNoteModelTest(TestCase):
 class PaymentModelTest(TestCase):
     def setUp(self):
         import uuid
-        from tenants.models import Tenant
+
         from finance.invoicing.models import FeeNote
+        from tenants.models import Tenant
         self.tenant = Tenant.objects.create(name="Pay Tenant", slug="pay-tenant")
         self.user = User.objects.create_user(username="payuser", password="pass")
         self.fee_note = FeeNote.objects.create(
@@ -121,8 +124,9 @@ class PaymentModelTest(TestCase):
         )
 
     def test_payment_creation(self):
-        from finance.payments.models import FeeNotePayment
         from datetime import date
+
+        from finance.payments.models import FeeNotePayment
         payment = FeeNotePayment.objects.create(
             tenant=self.tenant,
             fee_note=self.fee_note,
@@ -144,8 +148,9 @@ class ExpenseModelTest(TestCase):
         self.user = User.objects.create_user(username="expuser", password="pass")
 
     def test_expense_creation(self):
-        from finance.expenses.models import Expense
         from datetime import date
+
+        from finance.expenses.models import Expense
         expense = Expense.objects.create(
             tenant=self.tenant,
             description="Office rent",
@@ -164,8 +169,9 @@ class PayrollModelTest(TestCase):
         self.user = User.objects.create_user(username="pruser", password="pass")
 
     def test_employee_profile_creation(self):
-        from finance.payroll.models import EmployeePayrollProfile
         from datetime import date
+
+        from finance.payroll.models import EmployeePayrollProfile
         profile = EmployeePayrollProfile.objects.create(
             tenant=self.tenant,
             user=self.user,
@@ -200,8 +206,9 @@ class FxModelTest(TestCase):
         self.user = User.objects.create_user(username="fxuser", password="pass")
 
     def test_exchange_rate_creation(self):
-        from finance.fx.models import ExchangeRate
         from datetime import date
+
+        from finance.fx.models import ExchangeRate
         rate = ExchangeRate.objects.create(
             tenant=self.tenant,
             from_currency="USD",

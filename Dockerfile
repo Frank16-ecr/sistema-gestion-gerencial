@@ -37,13 +37,13 @@ COPY . .
 RUN SECRET_KEY=build-time-dummy python manage.py collectstatic --noinput
 
 # Create a non-root user
-RUN addgroup --system zelani && adduser --system --ingroup zelani zelani
-RUN chown -R zelani:zelani /app
-USER zelani
+RUN addgroup --system sgg && adduser --system --ingroup sgg sgg
+RUN chown -R sgg:sgg /app
+USER sgg
 
 EXPOSE 8000
 
-CMD ["python", "-m", "gunicorn", "zelani.wsgi:application", \
+CMD ["python", "-m", "gunicorn", "sgg.wsgi:application", \
      "--bind", "0.0.0.0:8000", \
      "--workers", "4", \
      "--timeout", "120"]
